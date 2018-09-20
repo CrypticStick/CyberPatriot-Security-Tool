@@ -29,6 +29,22 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             return hex.ToString();
         }
 
+        public static void EditByteArray(ref byte[] array, int index, byte value)
+        {
+            array[index] = value;
+            array[++index] = 0x00;
+        }
+
+        public static void EditByteArray(ref byte[] array, int start, int end, byte value)
+        {
+            int index = start;
+            while (index <= end) {
+                array[index] = value;
+                array[++index] = 0x00;
+                ++index;
+            }
+        }
+
         private void BtnBasicSecurity_Click(object sender, EventArgs e)
         {
             RegistryKey key = Registry.LocalMachine;
@@ -36,22 +52,43 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             try
             {
                 key = Registry.LocalMachine.OpenSubKey(
-                    @"SECURITY\Policy\PolAdtEv"
+                    @"SECURITY\Policy\PolAdtEv", 
+                    true
                     );
-            } catch (SecurityException ex)
+            }
+            catch (SecurityException ex)
             {
-                TxtBoxInfo.AppendText(Environment.NewLine + ex.ToString());
+                TxtBoxInfo.AppendText("You do not have sufficient privilages to access this key!");
             }
 
-            if(key != OGKey) {
+            if (key != OGKey)
+            {
                 TxtBoxInfo.AppendText(Environment.NewLine + "RegistryKey successfully created!");
-                byte[] value = (byte[])key.GetValue(null);
-                TxtBoxInfo.AppendText(Environment.NewLine + ByteArrayToString(value));
+                byte[] keyValue = (byte[])key.GetValue(null);
+
+                TxtBoxInfo.AppendText(
+                    Environment.NewLine +
+                    "Old: " +
+                    ByteArrayToString(keyValue)
+                );
+
+                EditByteArray(ref keyValue, 64, 68, 0x03);
+
+                TxtBoxInfo.AppendText(
+                    Environment.NewLine +
+                    "New: " +
+                    ByteArrayToString(keyValue)
+                );
+
+                key.SetValue(null, keyValue);
+
                 key.Close();
-            } else {
+            }
+            else
+            {
                 TxtBoxInfo.AppendText(Environment.NewLine + "Failed to read registry.");
             }
-            
+
         }
 
         private void MainForm_Load(object sender, EventArgs e)
