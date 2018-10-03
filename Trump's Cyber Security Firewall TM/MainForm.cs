@@ -22,6 +22,12 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             TxtBoxInfo.AppendText(Environment.UserName);
         }
 
+        private void Log(string message)
+        {
+            TxtBoxInfo.AppendText(Environment.NewLine + message);
+
+        }
+
         public static string ByteArrayToString(byte[] ba)
         {
             StringBuilder hex = new StringBuilder(ba.Length * 2);
@@ -45,50 +51,91 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
-        private void BtnAuditing_Click(object sender, EventArgs e)
+        private RegistryKey AccessRegistryKey(string key, bool editable)
         {
-            RegistryKey key = Registry.LocalMachine;
-            RegistryKey OGKey = key;
+            RegistryKey regKey = Registry.LocalMachine;
+            RegistryKey OGKey = regKey;
             try
             {
-                key = Registry.LocalMachine.OpenSubKey(
-                    @"SECURITY\Policy\PolAdtEv", 
-                    true
-                    );
+                regKey = Registry.LocalMachine.OpenSubKey(key, editable);
             }
             catch (SecurityException ex)
             {
-                TxtBoxInfo.AppendText("You do not have sufficient privilages to access this key!");
+                Log("You do not have sufficient privilages to access this key!");
             }
 
-            if (key != OGKey)
+            if (regKey != OGKey)
             {
-                TxtBoxInfo.AppendText(Environment.NewLine + "RegistryKey successfully created!");
-                byte[] keyValue = (byte[])key.GetValue(null);
+                Log("RegistryKey successfully created!");
+                return regKey;
+            }
+            else
+            {
+                Log("RegistryKey creation failed.");
+                regKey.Close();
+                return null;
+            }
+        }
 
-                TxtBoxInfo.AppendText(
-                    Environment.NewLine +
-                    "Old: " +
-                    ByteArrayToString(keyValue)
+        private void BtnAuditing_Click(object sender, EventArgs e)
+        {
+            RegistryKey auditKey = AccessRegistryKey(@"SECURITY\Policy\PolAdtEv", true);
+
+            if (auditKey != null)
+            {
+                byte[] keyValue = (byte[])auditKey.GetValue(null);
+
+                Log("Old: " + ByteArrayToString(keyValue)
                 );
 
                 EditByteArray(ref keyValue, 12, 114, 0x03); //Enable all auditing on Windows 7
 
-                TxtBoxInfo.AppendText(
-                    Environment.NewLine +
-                    "New: " +
-                    ByteArrayToString(keyValue)
+                Log(ByteArrayToString(keyValue));
+
+                auditKey.SetValue(null, keyValue);
+
+                auditKey.Close();
+            }
+        }
+
+        private void RemoveUser(string username)
+        {
+            Log($"Trying to delete {username}...");
+
+            string theoreticalDirectory = String.Format(@"C:\Users\%s", username);
+
+            RegistryKey key = AccessRegistryKey(
+                @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList",
+                true
                 );
 
-                key.SetValue(null, keyValue);
-
+            RegistryKey subKey;
+            if (key!=null)
+            {
+                String[] profiles = key.GetSubKeyNames();
+                foreach (string chaoticString in profiles)
+                {
+                    subKey = key.OpenSubKey(chaoticString);
+                    
+                    if (subKey.GetValue("ProfileImagePath").ToString()
+                        .Equals(theoreticalDirectory))
+                    {
+                        Log("Found user! Deleting...");
+                        try
+                        {
+                            key.DeleteSubKey(chaoticString);
+                            System.IO.Directory.Move(theoreticalDirectory, theoreticalDirectory + " (Deleted)");
+                        } catch (Exception ex)
+                        {
+                            Log("Account deletion failed!");
+                            return;
+                        }
+                        key.Close();
+                        return;
+                    }
+                }
                 key.Close();
             }
-            else
-            {
-                TxtBoxInfo.AppendText(Environment.NewLine + "Failed to read registry.");
-            }
-
         }
 
         private void BtnUsers_Click(object sender, EventArgs e)
@@ -109,50 +156,51 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 userList[i] = line;
             }
 
+            userList.RemoveAt(0);
+            userList[0] = userList[0].ToString().Split(' ')[0];
+
             ArrayList admins = new ArrayList(userList);
             try
-            {
-                admins.RemoveRange(0, 2);
+            { 
                 admins.RemoveRange(
                     admins.IndexOf("Authorized Users:"), 
                     admins.Count - admins.IndexOf("Authorized Users:")
                     );
             } catch (Exception ex) {             
-                TxtBoxInfo.AppendText(Environment.NewLine + "This list of names doesn't work.");
+                Log("This list of names doesn't work.");
                 return;
             }
 
-            RegistryKey key = Registry.LocalMachine;
-            RegistryKey OGKey = key;
-            try
-            {
-                key = Registry.LocalMachine.OpenSubKey(
-                    @"SECURITY\SAM\Domains\Account\Users\Names",
-                    false
-                    );
-            }
-            catch (SecurityException ex)
-            {
-                TxtBoxInfo.AppendText("You do not have sufficient privilages to access this key!");
-            }
+            RegistryKey usersKey = AccessRegistryKey(@"SECURITY\SAM\Domains\Account\Users\Names", false);
 
-            if (key != OGKey)
+            if (usersKey != null)
             {
-                TxtBoxInfo.AppendText(Environment.NewLine + "RegistryKey successfully created!");
-                String[] userNames = key.GetSubKeyNames();
-                key.Close();
+                Log("Reading list of users...");
+                String[] userNames = usersKey.GetSubKeyNames();
+                usersKey.Close();
 
                 String userAdminCmd;
 
                 foreach (String user in userNames)
                 {
-                    if (admins.Contains(user))
-                        userAdminCmd = String.Format("/C net localgroup \"Administrators\" \"%s\" /ADD", user);
-                    else
-                        userAdminCmd = String.Format("/C net localgroup \"Administrators\" \"%s\" /DELETE", user);
+                    if (!userList.Contains(user))
+                    {
+                        RemoveUser(user);
+                    }
 
+                    if (admins.Contains(user))
+                    {
+                        Log($"Setting {user} as admin...");
+                        userAdminCmd = String.Format("/C net localgroup \"Administrators\" \"%s\" /ADD", user);
+                    }
+                    else
+                    {
+                        Log($"Setting {user} as normal user...");
+                        userAdminCmd = String.Format("/C net localgroup \"Administrators\" \"%s\" /DELETE", user);
+                    }
                     System.Diagnostics.Process.Start("CMD.exe", userAdminCmd);
                 }
+
             }
         }
 
