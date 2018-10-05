@@ -66,7 +66,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
             if (regKey != OGKey)
             {
-                Log("RegistryKey successfully created!");
+                //Log("RegistryKey successfully created!");
                 return regKey;
             }
             else
@@ -102,7 +102,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         {
             Log($"Trying to delete {username}...");
 
-            string theoreticalDirectory = String.Format(@"C:\Users\%s", username);
+            string theoreticalDirectory = $@"C:\Users\{username}";
 
             RegistryKey key = AccessRegistryKey(
                 @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList",
@@ -110,13 +110,16 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 );
 
             RegistryKey subKey;
-            if (key!=null)
+            if (key != null)
             {
+                Log("Successfully accessed ProfileList.");
                 String[] profiles = key.GetSubKeyNames();
+                String currentPath;
                 foreach (string chaoticString in profiles)
                 {
                     subKey = key.OpenSubKey(chaoticString);
-                    
+                    currentPath = subKey.GetValue("ProfileImagePath").ToString();
+                    Log($"Found '{currentPath}'");
                     if (subKey.GetValue("ProfileImagePath").ToString()
                         .Equals(theoreticalDirectory))
                     {
@@ -125,7 +128,8 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         {
                             key.DeleteSubKey(chaoticString);
                             System.IO.Directory.Move(theoreticalDirectory, theoreticalDirectory + " (Deleted)");
-                        } catch (Exception ex)
+                        }
+                        catch (Exception ex)
                         {
                             Log("Account deletion failed!");
                             return;
@@ -134,8 +138,27 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         return;
                     }
                 }
+
+                RegistryKey usersKey = AccessRegistryKey(@"SECURITY\SAM\Domains\Account\Users\Names", true);
+
+                if (usersKey != null)
+                {
+                    RegistryKey toBeDeletKey = 
+                        usersKey.OpenSubKey(username,true);
+
+                    if (toBeDeletKey != null)
+                    {
+                        //.GetType().Name;
+                        //Log($"{toBeDeletValue}");
+                        //byte[] maybe = BitConverter.GetBytes(
+                        //    toBeDeletKey.GetValueKind(null));
+                        //Log(ByteArrayToString(maybe));
+                    }
+                }
+
                 key.Close();
             }
+            Log("Profile for specified user not found.");
         }
 
         private void BtnUsers_Click(object sender, EventArgs e)
@@ -177,26 +200,31 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             {
                 Log("Reading list of users...");
                 String[] userNames = usersKey.GetSubKeyNames();
+
                 usersKey.Close();
 
                 String userAdminCmd;
 
                 foreach (String user in userNames)
                 {
+                    if (user.Equals("Administrator") || user.Equals("Guest"))
+                        continue;
+
                     if (!userList.Contains(user))
                     {
                         RemoveUser(user);
+                        continue;
                     }
 
                     if (admins.Contains(user))
                     {
                         Log($"Setting {user} as admin...");
-                        userAdminCmd = String.Format("/C net localgroup \"Administrators\" \"%s\" /ADD", user);
+                        userAdminCmd = $"/C net localgroup \"Administrators\" \"{user}\" /ADD";
                     }
                     else
                     {
                         Log($"Setting {user} as normal user...");
-                        userAdminCmd = String.Format("/C net localgroup \"Administrators\" \"%s\" /DELETE", user);
+                        userAdminCmd = $"/C net localgroup \"Administrators\" \"{user}\" /DELETE";
                     }
                     System.Diagnostics.Process.Start("CMD.exe", userAdminCmd);
                 }
