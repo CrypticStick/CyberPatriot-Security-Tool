@@ -139,24 +139,27 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     }
                 }
 
-                RegistryKey usersKey = AccessRegistryKey(@"SECURITY\SAM\Domains\Account\Users\Names", true);
+                String exportKeyCmd = $@"/C regedit /E 'C:\Windows\Temp\{username}_type.reg' 'HKEY_LOCAL_MACHINE\SECURITY\SAM\Domains\Account\Users\Names\{username}'";
 
-                if (usersKey != null)
+                System.Diagnostics.Process.Start("CMD.exe", exportKeyCmd);
+                string regContents;
+                try
                 {
-                    RegistryKey toBeDeletKey = 
-                        usersKey.OpenSubKey(username,true);
-
-                    if (toBeDeletKey != null)
-                    {
-                        //.GetType().Name;
-                        //Log($"{toBeDeletValue}");
-                        //byte[] maybe = BitConverter.GetBytes(
-                        //    toBeDeletKey.GetValueKind(null));
-                        //Log(ByteArrayToString(maybe));
-                    }
+                    regContents = System.IO.File.ReadAllText($@"C:\Windows\Temp\{username}_type.reg");
+                    System.IO.File.Delete($@"C:\Windows\Temp\{username}_type.reg");
                 }
+                catch (Exception ex)
+                {
+                    Log(ex.Message);
+                    Log("Cannot fully delete user: failed to read user info.");
+                    return;
+                }
+                int startIndex = regContents.IndexOf('(') + 1;
+                int substringLength = regContents.IndexOf(')') - startIndex;
+                string regType = regContents.Substring(startIndex, substringLength);
 
-                key.Close();
+                Log(regType);
+                Log("Successfully read type!");
             }
             Log("Profile for specified user not found.");
         }
