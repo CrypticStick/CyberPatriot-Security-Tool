@@ -6,6 +6,9 @@ using System.Text;
 using System.Windows.Forms;
 using System.Collections;
 using System.Diagnostics;
+using System.Reflection;
+using System.IO;
+using System.Security.Principal;
 
 namespace Trump_s_Cyber_Security_Firewall_TM
 {
@@ -14,6 +17,24 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         public MainForm()
         {
             InitializeComponent();
+            if (WindowsIdentity.GetCurrent().IsSystem)
+            {
+                foreach (Process Proc in Process.GetProcesses())
+                    if (Proc.ProcessName.Equals("PSEXESVC"))
+                        Proc.Kill();
+
+                BtnAuditing.Enabled = true;
+                BtnSecure.Enabled = true;
+                BtnUsers.Enabled = true;
+
+            }
+            else if (new WindowsPrincipal(WindowsIdentity.GetCurrent())
+              .IsInRole(WindowsBuiltInRole.Administrator))
+            {
+                BtnSecure.Enabled = true;
+                BtnGodMode.Enabled = true;
+            }
+
             TxtBoxInfo.AppendText(Environment.UserName);
         }
 
@@ -119,7 +140,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
             if (userIDs != null)
             {
-                if(!userIDs.OpenSubKey("Names").GetSubKeyNames().Contains(username))
+                if (!userIDs.OpenSubKey("Names").GetSubKeyNames().Contains(username))
                 {
                     Log("User does not exist. Continuing...");
                     return;
@@ -230,26 +251,61 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             userIDs.Close();
         }
 
-
         private void BtnAuditing_Click(object sender, EventArgs e)
         {
             RegistryKey auditKey = AccessRegistryKey(@"SECURITY\Policy\PolAdtEv", true);
 
+            int endindex = 12;
+
+            OperatingSystem os = Environment.OSVersion;
+            Version vs = os.Version;
+
+            if (os.Platform == PlatformID.Win32NT)
+            {
+                switch (vs.Major)
+                {
+                    case 6:
+                        if (vs.Minor == 0)
+                        {
+                            endindex = 114; //Vista
+                            Log("WinVista detected.");
+                        }
+                        else if (vs.Minor == 1)
+                        {
+                            endindex = 116; //7
+                            Log("Win7 detected.");
+                        }
+                        else if (vs.Minor == 2)
+                        {
+                            endindex = 122; //8
+                            Log("Win8 detected.");
+                        }
+                        else
+                        {
+                            endindex = 122;   //8.1
+                            Log("Win8.1 detected.");
+                        }
+                        break;
+                    case 10:
+                        endindex = 126;    //10
+                        Log("Win10 detected.");
+                        break;
+                    default:
+                        Log("This version of Windows is not supported!");
+                        return;
+                }
+            }
+
             if (auditKey != null)
             {
                 byte[] keyValue = (byte[])auditKey.GetValue(null);
-
-                Log("Old: " + ByteArrayToString(keyValue)
-                );
-
-                EditByteArray(ref keyValue, 12, 114, 0x03); //Enable all auditing on Windows 7
-
-                Log(ByteArrayToString(keyValue));
-
+                EditByteArray(ref keyValue, 12, endindex, 0x03); //Enable all auditing
                 auditKey.SetValue(null, keyValue);
-
                 auditKey.Close();
+
+                Log("All auditing successfully enabled!");
             }
+
         }
 
         private void BtnUsers_Click(object sender, EventArgs e)
@@ -309,24 +365,31 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 foreach (String user in userNames)
                 {
                     if (user.Equals("Administrator") || user.Equals("Guest"))
-                        continue;
-
-                    if (!userList.Contains(user))
                     {
-                        RemoveUser(user,true);
-                        continue;
-                    }
-
-                    if (admins.Contains(user))
-                    {
-                        Log($"Setting {user} as admin...");
-                        userAdminCmd = $"/C net localgroup \"Administrators\" \"{user}\" /ADD";
+                        Log($"Ensuring {user} is disabled...");
+                        userAdminCmd = $"/C net user \"{user}\" /active:no";
                     }
                     else
                     {
-                        Log($"Setting {user} as normal user...");
-                        userAdminCmd = $"/C net localgroup \"Administrators\" \"{user}\" /DELETE";
+
+                        if (!userList.Contains(user))
+                        {
+                            RemoveUser(user, true);
+                            continue;
+                        }
+
+                        if (admins.Contains(user))
+                        {
+                            Log($"Setting {user} as admin...");
+                            userAdminCmd = $"/C net localgroup \"Administrators\" \"{user}\" /ADD";
+                        }
+                        else
+                        {
+                            Log($"Setting {user} as normal user...");
+                            userAdminCmd = $"/C net localgroup \"Administrators\" \"{user}\" /DELETE";
+                        }
                     }
+
                     Process.Start("CMD.exe", userAdminCmd);
                 }
 
@@ -336,6 +399,44 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         private void MainForm_Load(object sender, EventArgs e)
         {
 
+        }
+
+        private void BtnSecure_Click(object sender, EventArgs e)
+        {
+            if (File.Exists(@"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe")) {
+                Log("MalawareBytes already installed.");
+            } else {
+                Log("Installing MalawareBytes...");
+                try
+                {
+
+                    File.WriteAllBytes("mb3_setup.exe",
+                        Properties.Resources.mb3_setup_consumer_3_6_1_2711_1_0_463_1_0_7197
+                        );
+
+                    Process.Start("CMD.exe",
+                        "/C mb3_setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log"
+                        ).WaitForExit();
+                } catch (Exception ex)
+                {
+                    Log(ex.Message);
+                }
+                Log("Done installing MalawareBytes!");
+            }
+        }
+
+        private void BtnGodMode_Click(object sender, EventArgs e)
+        {
+            if (File.Exists("PsExec.exe"))
+            {
+                Process.Start("PsExec.exe",
+                    $"-h -s -i \"{Process.GetCurrentProcess().MainModule.FileName}\""
+                    );
+                Close();
+            } else
+            {
+                Log("Missing 'PsExec.exe'");
+            }
         }
 
         //TODO: Add new button - Build the Wall! (Sets up security)

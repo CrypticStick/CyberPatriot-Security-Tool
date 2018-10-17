@@ -28,29 +28,35 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.BtnAuditing = new System.Windows.Forms.Button();
             this.TxtBoxInfo = new System.Windows.Forms.TextBox();
             this.LblInfo = new System.Windows.Forms.Label();
             this.BtnUsers = new System.Windows.Forms.Button();
             this.TxtBoxUsers = new System.Windows.Forms.TextBox();
+            this.BtnSecure = new System.Windows.Forms.Button();
+            this.Tltp_Btns = new System.Windows.Forms.ToolTip(this.components);
+            this.BtnGodMode = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // BtnAuditing
             // 
+            this.BtnAuditing.Enabled = false;
             this.BtnAuditing.Font = new System.Drawing.Font("Comic Sans MS", 24F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.BtnAuditing.ForeColor = System.Drawing.Color.Red;
-            this.BtnAuditing.Location = new System.Drawing.Point(56, 37);
+            this.BtnAuditing.Location = new System.Drawing.Point(12, 37);
             this.BtnAuditing.Name = "BtnAuditing";
             this.BtnAuditing.Size = new System.Drawing.Size(181, 190);
             this.BtnAuditing.TabIndex = 0;
             this.BtnAuditing.Text = "Retrieve the emails!";
+            this.Tltp_Btns.SetToolTip(this.BtnAuditing, "Enables all auditing on the system.");
             this.BtnAuditing.UseVisualStyleBackColor = false;
             this.BtnAuditing.Click += new System.EventHandler(this.BtnAuditing_Click);
             // 
             // TxtBoxInfo
             // 
-            this.TxtBoxInfo.Location = new System.Drawing.Point(106, 330);
+            this.TxtBoxInfo.Location = new System.Drawing.Point(95, 358);
             this.TxtBoxInfo.Multiline = true;
             this.TxtBoxInfo.Name = "TxtBoxInfo";
             this.TxtBoxInfo.ReadOnly = true;
@@ -62,7 +68,7 @@
             // 
             this.LblInfo.AutoSize = true;
             this.LblInfo.Font = new System.Drawing.Font("Comic Sans MS", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.LblInfo.Location = new System.Drawing.Point(102, 307);
+            this.LblInfo.Location = new System.Drawing.Point(91, 335);
             this.LblInfo.Name = "LblInfo";
             this.LblInfo.Size = new System.Drawing.Size(45, 20);
             this.LblInfo.TabIndex = 2;
@@ -70,6 +76,7 @@
             // 
             // BtnUsers
             // 
+            this.BtnUsers.Enabled = false;
             this.BtnUsers.Font = new System.Drawing.Font("Comic Sans MS", 24F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.BtnUsers.ForeColor = System.Drawing.Color.Red;
             this.BtnUsers.Location = new System.Drawing.Point(400, 37);
@@ -77,6 +84,7 @@
             this.BtnUsers.Size = new System.Drawing.Size(183, 190);
             this.BtnUsers.TabIndex = 3;
             this.BtnUsers.Text = "Deport the aliens!";
+            this.Tltp_Btns.SetToolTip(this.BtnUsers, "Automatically configures system users based on text input.");
             this.BtnUsers.UseVisualStyleBackColor = false;
             this.BtnUsers.Click += new System.EventHandler(this.BtnUsers_Click);
             // 
@@ -89,11 +97,42 @@
             this.TxtBoxUsers.Size = new System.Drawing.Size(156, 190);
             this.TxtBoxUsers.TabIndex = 4;
             // 
+            // BtnSecure
+            // 
+            this.BtnSecure.Enabled = false;
+            this.BtnSecure.Font = new System.Drawing.Font("Comic Sans MS", 24F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.BtnSecure.ForeColor = System.Drawing.Color.Red;
+            this.BtnSecure.Location = new System.Drawing.Point(206, 37);
+            this.BtnSecure.Name = "BtnSecure";
+            this.BtnSecure.Size = new System.Drawing.Size(181, 190);
+            this.BtnSecure.TabIndex = 5;
+            this.BtnSecure.Text = "Build the wall!";
+            this.Tltp_Btns.SetToolTip(this.BtnSecure, "Configures system for optimal security.\r\nAlso installs anti-malaware and enables " +
+        "security features.");
+            this.BtnSecure.UseVisualStyleBackColor = false;
+            this.BtnSecure.Click += new System.EventHandler(this.BtnSecure_Click);
+            // 
+            // BtnGodMode
+            // 
+            this.BtnGodMode.Enabled = false;
+            this.BtnGodMode.Font = new System.Drawing.Font("Comic Sans MS", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.BtnGodMode.ForeColor = System.Drawing.Color.Red;
+            this.BtnGodMode.Location = new System.Drawing.Point(26, 275);
+            this.BtnGodMode.Name = "BtnGodMode";
+            this.BtnGodMode.Size = new System.Drawing.Size(158, 41);
+            this.BtnGodMode.TabIndex = 6;
+            this.BtnGodMode.Text = "Become God";
+            this.Tltp_Btns.SetToolTip(this.BtnGodMode, "Runs the program as System\r\n(enables the rest of the program\'s features)");
+            this.BtnGodMode.UseVisualStyleBackColor = false;
+            this.BtnGodMode.Click += new System.EventHandler(this.BtnGodMode_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(800, 494);
+            this.Controls.Add(this.BtnGodMode);
+            this.Controls.Add(this.BtnSecure);
             this.Controls.Add(this.TxtBoxUsers);
             this.Controls.Add(this.BtnUsers);
             this.Controls.Add(this.LblInfo);
@@ -116,6 +155,9 @@
         private System.Windows.Forms.Label LblInfo;
         private System.Windows.Forms.Button BtnUsers;
         private System.Windows.Forms.TextBox TxtBoxUsers;
+        private System.Windows.Forms.Button BtnSecure;
+        private System.Windows.Forms.ToolTip Tltp_Btns;
+        private System.Windows.Forms.Button BtnGodMode;
     }
 }
 
