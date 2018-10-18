@@ -409,7 +409,6 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 Log("Installing MalawareBytes...");
                 try
                 {
-
                     File.WriteAllBytes("mb3_setup.exe",
                         Properties.Resources.mb3_setup_consumer_3_6_1_2711_1_0_463_1_0_7197
                         );
@@ -417,6 +416,9 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     Process.Start("CMD.exe",
                         "/C mb3_setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log"
                         ).WaitForExit();
+
+                    File.Delete("mb3_setup.exe");
+
                 } catch (Exception ex)
                 {
                     Log(ex.Message);
@@ -427,15 +429,24 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
         private void BtnGodMode_Click(object sender, EventArgs e)
         {
-            if (File.Exists("PsExec.exe"))
+            Log("Restarting as System user...");
+            try
             {
-                Process.Start("PsExec.exe",
-                    $"-h -s -i \"{Process.GetCurrentProcess().MainModule.FileName}\""
+                File.WriteAllBytes("PsExec.exe",
+                    Properties.Resources.PsExec
                     );
+
+                Process.Start("PsExec.exe",
+                     $"-h -s -i \"{Process.GetCurrentProcess().MainModule.FileName}\""
+                     );
+
+                File.Delete("PsExec.exe");
                 Close();
-            } else
+            }
+            catch (Exception ex)
             {
-                Log("Missing 'PsExec.exe'");
+                Log(ex.Message);
+                Log("Operation falied!");
             }
         }
 

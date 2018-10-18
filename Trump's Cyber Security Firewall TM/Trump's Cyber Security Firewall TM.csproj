@@ -104,6 +104,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\mb3-setup-consumer-3.6.1.2711-1.0.463-1.0.7197.exe" />
+    <None Include="Resources\PsExec.exe" />
     <Content Include="TrumpsCyberSecurityFirewallTM.ico" />
   </ItemGroup>
   <ItemGroup>

@@ -121,4 +121,7 @@
   <data name="mb3_setup_consumer_3_6_1_2711_1_0_463_1_0_7197" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\mb3-setup-consumer-3.6.1.2711-1.0.463-1.0.7197.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="PsExec" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\PsExec.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
 </root>
