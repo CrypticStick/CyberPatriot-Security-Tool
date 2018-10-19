@@ -450,11 +450,17 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
-        //TODO: Add new button - Build the Wall! (Sets up security)
+        //TODO:
         /*
          * 'Build the Wall!' should be able to configure windows security settings 
-         * (UAC, Firewall, Password Requirements, etc.)
-         * and install antimalaware (Malawarebytes) automatically.
+         * (UAC, Firewall, Password Requirements (ex. at least 10 characters long, password history, age policy) 
+         * (Account Policies), etc.)
+         * Add easy way to turn on and off all FTP / 
+         * Remote conection services / windows feature)
+         *  Update firefox and Windows (DEFER FEATURE UPDATES)
+         * Tool to get info about file (Owner, MD5, Group, EVERYTHING)
+         * Automatically give every user a password
+         * Remove (AKA rename prohibited files (.mp3, any personal files from users lol)
          */
     }
 }
