@@ -1,14 +1,15 @@
 ﻿using Microsoft.Win32;
 using System;
-using System.Linq;
-using System.Security;
-using System.Text;
-using System.Windows.Forms;
 using System.Collections;
 using System.Diagnostics;
-using System.Reflection;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Security;
 using System.Security.Principal;
+using System.Text;
+using System.Threading;
+using System.Windows.Forms;
 
 namespace Trump_s_Cyber_Security_Firewall_TM
 {
@@ -17,35 +18,87 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         public MainForm()
         {
             InitializeComponent();
+            TxtBoxInfo.AppendText(Environment.UserName);
+        }
+
+        private void ElevateUser()
+        {
+
+            Log("Restarting as System user...", false);
+            try
+            {
+                File.WriteAllBytes("C:\\Windows\\Temp\\PsExec64.exe",
+                    Properties.Resources.PsExec64
+                    );
+
+                Process.Start("C:\\Windows\\Temp\\PsExec64.exe",
+                     $"-h -s -i \"{Process.GetCurrentProcess().MainModule.FileName}\""
+                     );
+
+                Close();
+                Environment.Exit(5);
+            }
+            catch (Exception ex)
+            {
+                Log(ex.Message, true);
+                Log("Operation falied!", false);
+            }
+
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
             if (WindowsIdentity.GetCurrent().IsSystem)
             {
                 foreach (Process Proc in Process.GetProcesses())
-                    if (Proc.ProcessName.Equals("PSEXESVC"))
-                        Proc.Kill();
+                    try
+                    {
+                        if (Proc.MainModule.FileName.Contains("PsExec64.exe"))
+                            Proc.Kill();
+                    }
+                    catch (Exception ex) { }
 
-                BtnAuditing.Enabled = true;
                 BtnSecure.Enabled = true;
-                BtnUsers.Enabled = true;
 
             }
             else if (new WindowsPrincipal(WindowsIdentity.GetCurrent())
               .IsInRole(WindowsBuiltInRole.Administrator))
             {
-                BtnSecure.Enabled = true;
-                BtnGodMode.Enabled = true;
+                ElevateUser();
             }
-
-            TxtBoxInfo.AppendText(Environment.UserName);
         }
 
         /// <summary>
         /// Logs the specified string to TxtBoxInfo on a new line.
         /// </summary>
-        private void Log(string message)
+        private void Log(string message, bool debug)
         {
+            if (ChkDebug.Checked && debug) return;
             TxtBoxInfo.AppendText(Environment.NewLine + message);
-
         }
+
+        /// <summary>
+        /// Runs the specified command in command prompt, waiting until the process finishes or times out.
+        /// </summary>
+        /// <param name="command">The command to pass into command prompt.</param>
+        /// <param name="millisWait">Milliseconds until the process times out.</param>
+        private bool CMD(string command, int millisWait)
+        {
+            Process cmdTask = Process.Start("CMD.exe", "/C " + command);
+            return cmdTask.WaitForExit(millisWait);
+        }
+
+        /// <summary>
+        /// Runs the specified command in command prompt.
+        /// </summary>
+        /// <param name="command">The command to pass into command prompt.</param>
+        /// <param name="waitForExit">Whether the thread will lock until process completes.</param>
+        private void CMD(string command, bool waitForExit)
+        {
+            Process cmdTask = Process.Start("CMD.exe", "/C " + command);
+            if (waitForExit) cmdTask.WaitForExit();
+        }
+
 
         /// <summary>
         /// Converts an array of bytes into a hexideciamal string.
@@ -84,7 +137,8 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         public static void EditByteArray(ref byte[] array, int start, int end, byte value)
         {
             int index = start;
-            while (index <= end) {
+            while (index <= end)
+            {
                 array[index++] = value;
                 array[index++] = 0x00;
             }
@@ -106,7 +160,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             catch (SecurityException ex)
             {
-                Log("You do not have sufficient privilages to access this key!");
+                Log("You do not have sufficient privilages to access this key!", true);
             }
 
             if (regKey != OGKey)
@@ -116,7 +170,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             else
             {
-                Log("RegistryKey creation failed.");
+                Log("RegistryKey creation failed.", true);
                 regKey.Close();
                 return null;
             }
@@ -129,7 +183,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         /// <param name="retainFiles">Whether the user's files should be saved.</param>
         private void RemoveUser(string username, bool retainFiles)
         {
-            Log($"Trying to delete {username}...");
+            Log($"Trying to delete {username}...", true);
 
             string theoreticalDirectory = $@"C:\Users\{username}";
 
@@ -142,7 +196,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             {
                 if (!userIDs.OpenSubKey("Names").GetSubKeyNames().Contains(username))
                 {
-                    Log("User does not exist. Continuing...");
+                    Log("User does not exist. Continuing...", true);
                     return;
                 }
 
@@ -154,7 +208,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 RegistryKey subKey;
                 if (key != null)
                 {
-                    Log("Successfully accessed ProfileList.");
+                    Log("Successfully accessed ProfileList.", true);
                     String[] profiles = key.GetSubKeyNames();
                     String currentPath;
                     bool found = false;
@@ -166,45 +220,44 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                             .Equals(theoreticalDirectory))
                         {
                             found = true;
-                            Log("Found user! Attempting to remove user files...");
+                            Log("Found user! Attempting to remove user files...", true);
                             try
                             {
                                 key.DeleteSubKey(chaoticString);
-                                Log($"Removed {username}'s profile.");
+                                Log($"Removed {username}'s desktop.", false);
                                 if (retainFiles)
                                 {
                                     System.IO.Directory.Move(theoreticalDirectory, theoreticalDirectory + " (Deleted)");
-                                    Log($"{username}'s file directory successfully renamed.");
+                                    Log($"{username}'s file directory successfully renamed.", false);
                                 }
                                 else
                                 {
                                     System.IO.Directory.Delete(theoreticalDirectory);
-                                    Log($"{username}'s files successfully deleted.");
+                                    Log($"{username}'s files successfully deleted.", false);
                                 }
                             }
                             catch (Exception ex)
                             {
-                                Log("Warning: Could not remove user files!!");
+                                Log($"Warning: Could not remove {username}'s files!!", false);
                             }
                         }
                     }
-                    if (!found) Log("Didn't find user in ProfileList. Continuing...");
+                    if (!found) Log("Didn't find user in ProfileList. Continuing...", true);
                     key.Close();
                 }
                 else
                 {
-                    Log("ERROR: ProfileList key could not be opened. Do you have permission?");
+                    Log("ERROR: ProfileList key could not be opened. Do you have permission?", true);
                     key.Close();
                     return;
                 }
 
-                Log($"Attempting to export profile info of {username}...");
-                String exportKeyCmd = $"/C regedit /E \"C:\\Windows\\Temp\\{username}_type.reg\" \"HKEY_LOCAL_MACHINE\\SECURITY\\SAM\\Domains\\Account\\Users\\Names\\{username}\"";
+                Log($"Attempting to export profile info of {username}...", true);
+                String exportKeyCmd = $"regedit /E \"C:\\Windows\\Temp\\{username}_type.reg\" \"HKEY_LOCAL_MACHINE\\SECURITY\\SAM\\Domains\\Account\\Users\\Names\\{username}\"";
 
-                Process exportUser = Process.Start("CMD.exe", exportKeyCmd);
-                if (!exportUser.WaitForExit(5000))
+                if (!CMD(exportKeyCmd, 5000))
                 {
-                    Log("User export timed out. Reading will likely fail.");
+                    Log("User export timed out. Reading will likely fail.", true);
                 }
                 string regContents;
                 try
@@ -214,15 +267,15 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 }
                 catch (Exception ex)
                 {
-                    Log(ex.Message);
-                    Log("ERROR: Cannot delete user - failed to read user info.");
+                    Log(ex.Message, true);
+                    Log("ERROR: Cannot delete user - failed to read user info.", false);
                     return;
                 }
                 int startIndex = regContents.IndexOf('(') + 1;
                 int substringLength = regContents.IndexOf(')') - startIndex;
                 string regType = regContents.Substring(startIndex, substringLength);
 
-                Log("Successfully read user info! Attempting to fully wipe user...");
+                Log("Successfully read user info! Attempting to fully wipe user...", true);
 
                 foreach (string id in userIDs.GetSubKeyNames())
                 {
@@ -232,26 +285,27 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         {
                             userIDs.DeleteSubKey(id);
                             userIDs.OpenSubKey("Names", true).DeleteSubKey(username);
-                            Log($"User {username} has been fully removed!");
+                            Log($"User {username} has been fully removed!", false);
                             userIDs.Close();
                             return;
-                        } catch (Exception ex)
+                        }
+                        catch (Exception ex)
                         {
-                            Log(ex.Message);
+                            Log(ex.Message, true);
                         }
                     }
                 }
-                Log($"User {username} not found.");
+                Log($"User {username} not found.", true);
             }
             else
             {
-                Log("Failed to access users.");
+                Log("Failed to access users.", true);
             }
-            Log($"ERROR: {username} failed to delete.");
+            Log($"ERROR: {username} failed to delete.", false);
             userIDs.Close();
         }
 
-        private void BtnAuditing_Click(object sender, EventArgs e)
+        private void EnableAuditing()
         {
             RegistryKey auditKey = AccessRegistryKey(@"SECURITY\Policy\PolAdtEv", true);
 
@@ -268,30 +322,30 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         if (vs.Minor == 0)
                         {
                             endindex = 114; //Vista
-                            Log("WinVista detected.");
+                            Log("WinVista detected.", false);
                         }
                         else if (vs.Minor == 1)
                         {
                             endindex = 116; //7
-                            Log("Win7 detected.");
+                            Log("Win7 detected.", false);
                         }
                         else if (vs.Minor == 2)
                         {
                             endindex = 122; //8
-                            Log("Win8 detected.");
+                            Log("Win8 detected.", false);
                         }
                         else
                         {
                             endindex = 122;   //8.1
-                            Log("Win8.1 detected.");
+                            Log("Win8.1 detected.", false);
                         }
                         break;
                     case 10:
                         endindex = 126;    //10
-                        Log("Win10 detected.");
+                        Log("Win10 detected.", false);
                         break;
                     default:
-                        Log("This version of Windows is not supported!");
+                        Log("This version of Windows is not supported!", false);
                         return;
                 }
             }
@@ -303,13 +357,19 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 auditKey.SetValue(null, keyValue);
                 auditKey.Close();
 
-                Log("All auditing successfully enabled!");
+                Log("All auditing successfully enabled!", false);
             }
 
         }
 
-        private void BtnUsers_Click(object sender, EventArgs e)
+        private void ConfigureUsers(string password)
         {
+            if (TxtBoxPass.Text.Length < 8)
+            {
+                Log("Please provide a password before configuring users.", false);
+                return;
+            }
+
             ArrayList userList;
             ArrayList admins;
             try
@@ -318,7 +378,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 userList.AddRange(TxtBoxUsers.Text.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries));
                 if (userList.Count < 2 || !userList.Contains("Authorized Administrators:") || !userList.Contains("Authorized Users:"))
                 {
-                    Log("Please paste \"Authorized Users\" and \"Authorized Administrators\" text in textbox.");
+                    Log("Please paste \"Authorized Users\" and \"Authorized Administrators\" text in textbox.", false);
                     return;
                 }
 
@@ -341,21 +401,21 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
                 admins = new ArrayList(userList);
 
-                    admins.RemoveRange(
-                        admins.IndexOf("Authorized Users:"),
-                        admins.Count - admins.IndexOf("Authorized Users:")
-                        );
+                admins.RemoveRange(
+                    admins.IndexOf("Authorized Users:"),
+                    admins.Count - admins.IndexOf("Authorized Users:")
+                    );
             }
             catch (Exception ex)
             {
-                Log("This list of names doesn't work.");
+                Log("This list of names doesn't work.", false);
                 return;
             }
             RegistryKey usersKey = AccessRegistryKey(@"SECURITY\SAM\Domains\Account\Users\Names", false);
 
             if (usersKey != null)
             {
-                Log("Reading list of users...");
+                Log("Reading list of users...", true);
                 String[] userNames = usersKey.GetSubKeyNames();
 
                 usersKey.Close();
@@ -366,8 +426,8 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 {
                     if (user.Equals("Administrator") || user.Equals("Guest"))
                     {
-                        Log($"Ensuring {user} is disabled...");
-                        userAdminCmd = $"/C net user \"{user}\" /active:no";
+                        Log($"Ensuring {user} is disabled...", false);
+                        userAdminCmd = $"net user \"{user}\" /active:no";
                     }
                     else
                     {
@@ -380,74 +440,73 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
                         if (admins.Contains(user))
                         {
-                            Log($"Setting {user} as admin...");
-                            userAdminCmd = $"/C net localgroup \"Administrators\" \"{user}\" /ADD";
+                            Log($"Setting {user} as admin...", false);
+                            userAdminCmd = $"net localgroup \"Administrators\" \"{user}\" /ADD";
                         }
                         else
                         {
-                            Log($"Setting {user} as normal user...");
-                            userAdminCmd = $"/C net localgroup \"Administrators\" \"{user}\" /DELETE";
+                            Log($"Setting {user} as normal user...", false);
+                            userAdminCmd = $"net localgroup \"Administrators\" \"{user}\" /DELETE";
                         }
                     }
+                    CMD(userAdminCmd, false);
 
-                    Process.Start("CMD.exe", userAdminCmd);
+                    if (!admins[0].Equals(user))
+                        CMD($"net user \"{user}\" \"{password}\"", false);
                 }
 
             }
         }
 
-        private void MainForm_Load(object sender, EventArgs e)
+        private void InstallMalawareBytes()
         {
+            if (File.Exists(@"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe"))
+            {
+                Log("MalawareBytes already installed.", false);
+            }
+            else
+            {
+                Log("Downloading MalwareBytes...", false);
+                try
+                {
+                    using (var client = new WebClient())
+                    {
+                        client.DownloadFile("https://downloads.malwarebytes.com/file/mb3/", "C:\\Windows\\Temp\\mb3_setup.exe");
+                        while (client.IsBusy) { Thread.Sleep(500); }
+                    }
 
+                    Log("Installing MalwareBytes...", false);
+                    CMD("C:\\Windows\\Temp\\mb3_setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log"
+                        , true);
+
+                    Log("Successfully installed MalwareBytes!", false);
+                    File.Delete("C:\\Windows\\Temp\\mb3_setup.exe");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex.Message, true);
+                    Log("Failed to install MalwareBytes", false);
+                }
+            }
+        }
+
+        private void ConfigurePolicy()
+        {
+            Log("Configuring password policy...", true);
+            CMD("net accounts /minpwlen:8", false);
+            CMD("net accounts /maxpwage:30", false);
+            CMD("net accounts /minpwage:10", false);
+            CMD("net accounts /uniquepw:8", false);
         }
 
         private void BtnSecure_Click(object sender, EventArgs e)
         {
-            if (File.Exists(@"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe")) {
-                Log("MalawareBytes already installed.");
-            } else {
-                Log("Installing MalawareBytes...");
-                try
-                {
-                    File.WriteAllBytes("mb3_setup.exe",
-                        Properties.Resources.mb3_setup_consumer_3_6_1_2711_1_0_463_1_0_7197
-                        );
-
-                    Process.Start("CMD.exe",
-                        "/C mb3_setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log"
-                        ).WaitForExit();
-
-                    File.Delete("mb3_setup.exe");
-
-                } catch (Exception ex)
-                {
-                    Log(ex.Message);
-                }
-                Log("Done installing MalawareBytes!");
-            }
-        }
-
-        private void BtnGodMode_Click(object sender, EventArgs e)
-        {
-            Log("Restarting as System user...");
-            try
-            {
-                File.WriteAllBytes("PsExec.exe",
-                    Properties.Resources.PsExec
-                    );
-
-                Process.Start("PsExec.exe",
-                     $"-h -s -i \"{Process.GetCurrentProcess().MainModule.FileName}\""
-                     );
-
-                File.Delete("PsExec.exe");
-                Close();
-            }
-            catch (Exception ex)
-            {
-                Log(ex.Message);
-                Log("Operation falied!");
-            }
+            EnableAuditing();
+            ConfigureUsers(TxtBoxPass.Text);
+            ConfigurePolicy();
+            InstallMalawareBytes();
+            Log("The wall has been built!", false);
+            Log("----------------------------------------------------", false);
         }
 
         //TODO:

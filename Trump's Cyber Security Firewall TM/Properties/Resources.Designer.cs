@@ -63,19 +63,9 @@ namespace Trump_s_Cyber_Security_Firewall_TM.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        public static byte[] mb3_setup_consumer_3_6_1_2711_1_0_463_1_0_7197 {
+        public static byte[] PsExec64 {
             get {
-                object obj = ResourceManager.GetObject("mb3_setup_consumer_3_6_1_2711_1_0_463_1_0_7197", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        public static byte[] PsExec {
-            get {
-                object obj = ResourceManager.GetObject("PsExec", resourceCulture);
+                object obj = ResourceManager.GetObject("PsExec64", resourceCulture);
                 return ((byte[])(obj));
             }
         }
