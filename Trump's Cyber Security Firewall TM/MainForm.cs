@@ -10,6 +10,8 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.ComponentModel;
+using System.Threading.Tasks;
 
 namespace Trump_s_Cyber_Security_Firewall_TM
 {
@@ -354,7 +356,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     using (var client = new WebClient())
                     {
                         client.DownloadFile("https://downloads.malwarebytes.com/file/mb3/", "C:\\Windows\\Temp\\mb3_setup.exe");
-                        while (client.IsBusy) { Thread.Sleep(500); }
+                        while (client.IsBusy) { Task.Delay(500); }
                     }
 
                     Log("Installing MalwareBytes...", false);
@@ -372,7 +374,6 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
-        static bool firefoxDownloaded = false;
         private void UpdateFirefox()
         {
             if (File.Exists(@"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"))
@@ -388,7 +389,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     using (var client = new WebClient())
                     {
                         client.DownloadFile("https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US", @"C:\Windows\Temp\firefox_setup.exe");
-                        while (client.IsBusy) { Thread.Sleep(500); }
+                        while (client.IsBusy) { Task.Delay(500); }
                     }
 
                     Log("Installing Firefox...", false);
@@ -462,15 +463,25 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
-        private void BtnSecure_Click(object sender, EventArgs e)
+        private void listOfTasks(object sender, DoWorkEventArgs e)
         {
-            BtnSecure.Enabled = false;
             EnableAuditing();
             ConfigureUsers(TxtBoxPass.Text);
             ConfigurePolicy();
             InstallMalawareBytes();
             UpdateFirefox();
             //UpdateWindows();
+        }
+
+        private async void BtnSecure_Click(object sender, EventArgs e)
+        {
+            BtnSecure.Enabled = false;
+
+            var tasks = new BackgroundWorker();
+            tasks.DoWork += new DoWorkEventHandler(listOfTasks);
+            tasks.RunWorkerAsync();
+            while (tasks.IsBusy) await Task.Delay(500);
+
             Log("The wall has been built!", false);
             Log("----------------------------------------------------", false);
             BtnSecure.Enabled = true;
