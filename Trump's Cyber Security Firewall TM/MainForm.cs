@@ -1,9 +1,9 @@
 ﻿using Microsoft.Win32;
+using WUApiLib;
 using System;
 using System.Collections;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Security;
 using System.Security.Principal;
@@ -73,7 +73,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         /// </summary>
         private void Log(string message, bool debug)
         {
-            if (ChkDebug.Checked && debug) return;
+            if (!ChkDebug.Checked && debug) return;
             TxtBoxInfo.AppendText(Environment.NewLine + message);
         }
 
@@ -84,7 +84,11 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         /// <param name="millisWait">Milliseconds until the process times out.</param>
         private bool CMD(string command, int millisWait)
         {
-            Process cmdTask = Process.Start("CMD.exe", "/C " + command);
+            Process cmdTask = new Process();
+            cmdTask.StartInfo.FileName = "CMD.exe";
+            cmdTask.StartInfo.Arguments = "/C " + command;
+            cmdTask.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            cmdTask.Start();
             return cmdTask.WaitForExit(millisWait);
         }
 
@@ -95,7 +99,11 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         /// <param name="waitForExit">Whether the thread will lock until process completes.</param>
         private void CMD(string command, bool waitForExit)
         {
-            Process cmdTask = Process.Start("CMD.exe", "/C " + command);
+            Process cmdTask = new Process();
+            cmdTask.StartInfo.FileName = "CMD.exe";
+            cmdTask.StartInfo.Arguments = "/C " + command;
+            cmdTask.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            cmdTask.Start();
             if (waitForExit) cmdTask.WaitForExit();
         }
 
@@ -145,7 +153,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         }
 
         /// <summary>
-        /// Provides a <see cref="Microsoft.Win32.RegistryKey"/> object for the specified registry directory.
+        /// Provides a <see cref="Microsoft.Win32.RegistryKey"/> object for the specified local machine registry directory.
         /// </summary>
         /// <param name="key">The registry key being accessed.</param>
         /// <param name="writable">Whether the key can be written to.</param>
@@ -176,139 +184,8 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
-        /// <summary>
-        /// Removes the specified user from the system.
-        /// </summary>
-        /// <param name="username">The user to be deleted.</param>
-        /// <param name="retainFiles">Whether the user's files should be saved.</param>
-        private void RemoveUser(string username, bool retainFiles)
-        {
-            Log($"Trying to delete {username}...", true);
-
-            string theoreticalDirectory = $@"C:\Users\{username}";
-
-            RegistryKey userIDs = AccessRegistryKey(
-            @"SECURITY\SAM\Domains\Account\Users",
-            true
-            );
-
-            if (userIDs != null)
-            {
-                if (!userIDs.OpenSubKey("Names").GetSubKeyNames().Contains(username))
-                {
-                    Log("User does not exist. Continuing...", true);
-                    return;
-                }
-
-                RegistryKey key = AccessRegistryKey(
-                @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList",
-                true
-                );
-
-                RegistryKey subKey;
-                if (key != null)
-                {
-                    Log("Successfully accessed ProfileList.", true);
-                    String[] profiles = key.GetSubKeyNames();
-                    String currentPath;
-                    bool found = false;
-                    foreach (string chaoticString in profiles)
-                    {
-                        subKey = key.OpenSubKey(chaoticString);
-                        currentPath = subKey.GetValue("ProfileImagePath").ToString();
-                        if (subKey.GetValue("ProfileImagePath").ToString()
-                            .Equals(theoreticalDirectory))
-                        {
-                            found = true;
-                            Log("Found user! Attempting to remove user files...", true);
-                            try
-                            {
-                                key.DeleteSubKey(chaoticString);
-                                Log($"Removed {username}'s desktop.", false);
-                                if (retainFiles)
-                                {
-                                    System.IO.Directory.Move(theoreticalDirectory, theoreticalDirectory + " (Deleted)");
-                                    Log($"{username}'s file directory successfully renamed.", false);
-                                }
-                                else
-                                {
-                                    System.IO.Directory.Delete(theoreticalDirectory);
-                                    Log($"{username}'s files successfully deleted.", false);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Log($"Warning: Could not remove {username}'s files!!", false);
-                            }
-                        }
-                    }
-                    if (!found) Log("Didn't find user in ProfileList. Continuing...", true);
-                    key.Close();
-                }
-                else
-                {
-                    Log("ERROR: ProfileList key could not be opened. Do you have permission?", true);
-                    key.Close();
-                    return;
-                }
-
-                Log($"Attempting to export profile info of {username}...", true);
-                String exportKeyCmd = $"regedit /E \"C:\\Windows\\Temp\\{username}_type.reg\" \"HKEY_LOCAL_MACHINE\\SECURITY\\SAM\\Domains\\Account\\Users\\Names\\{username}\"";
-
-                if (!CMD(exportKeyCmd, 5000))
-                {
-                    Log("User export timed out. Reading will likely fail.", true);
-                }
-                string regContents;
-                try
-                {
-                    regContents = System.IO.File.ReadAllText($@"C:\Windows\Temp\{username}_type.reg");
-                    System.IO.File.Delete($@"C:\Windows\Temp\{username}_type.reg");
-                }
-                catch (Exception ex)
-                {
-                    Log(ex.Message, true);
-                    Log("ERROR: Cannot delete user - failed to read user info.", false);
-                    return;
-                }
-                int startIndex = regContents.IndexOf('(') + 1;
-                int substringLength = regContents.IndexOf(')') - startIndex;
-                string regType = regContents.Substring(startIndex, substringLength);
-
-                Log("Successfully read user info! Attempting to fully wipe user...", true);
-
-                foreach (string id in userIDs.GetSubKeyNames())
-                {
-                    if (id.Contains(regType.ToUpper()))
-                    {
-                        try
-                        {
-                            userIDs.DeleteSubKey(id);
-                            userIDs.OpenSubKey("Names", true).DeleteSubKey(username);
-                            Log($"User {username} has been fully removed!", false);
-                            userIDs.Close();
-                            return;
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex.Message, true);
-                        }
-                    }
-                }
-                Log($"User {username} not found.", true);
-            }
-            else
-            {
-                Log("Failed to access users.", true);
-            }
-            Log($"ERROR: {username} failed to delete.", false);
-            userIDs.Close();
-        }
-
         private void EnableAuditing()
         {
-            RegistryKey auditKey = AccessRegistryKey(@"SECURITY\Policy\PolAdtEv", true);
-
             int endindex = 12;
 
             OperatingSystem os = Environment.OSVersion;
@@ -350,14 +227,17 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 }
             }
 
-            if (auditKey != null)
+            using (var key = AccessRegistryKey(@"SECURITY\Policy\PolAdtEv", true))
             {
-                byte[] keyValue = (byte[])auditKey.GetValue(null);
-                EditByteArray(ref keyValue, 12, endindex, 0x03); //Enable all auditing
-                auditKey.SetValue(null, keyValue);
-                auditKey.Close();
+                if (key != null)
+                {
+                    byte[] keyValue = (byte[])key.GetValue(null);
+                    EditByteArray(ref keyValue, 12, endindex, 0x03); //Enable all auditing
+                    key.SetValue(null, keyValue);
+                    key.Close();
 
-                Log("All auditing successfully enabled!", false);
+                    Log("All auditing successfully enabled!", false);
+                }
             }
 
         }
@@ -411,53 +291,55 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 Log("This list of names doesn't work.", false);
                 return;
             }
-            RegistryKey usersKey = AccessRegistryKey(@"SECURITY\SAM\Domains\Account\Users\Names", false);
 
-            if (usersKey != null)
+            String[] userNames = null;
+            using (var key = AccessRegistryKey(@"SECURITY\SAM\Domains\Account\Users\Names", false))
             {
-                Log("Reading list of users...", true);
-                String[] userNames = usersKey.GetSubKeyNames();
-
-                usersKey.Close();
-
-                String userAdminCmd;
-
-                foreach (String user in userNames)
+                if (key != null)
                 {
-                    if (user.Equals("Administrator") || user.Equals("Guest"))
+                    Log("Reading list of users...", true);
+                    userNames = key.GetSubKeyNames();
+                }
+            }
+
+            String userAdminCmd;
+
+            foreach (String user in userNames)
+            {
+                if (user.Equals("Administrator") || user.Equals("Guest"))
+                {
+                    Log($"Ensuring {user} is disabled...", false);
+                    userAdminCmd = $"net user \"{user}\" /active:no";
+                }
+                else
+                {
+
+                    if (!userList.Contains(user))
                     {
-                        Log($"Ensuring {user} is disabled...", false);
-                        userAdminCmd = $"net user \"{user}\" /active:no";
+                        Log($"Deleting \"{user}\"...", false);
+                        CMD($"net user \"{user}\" /delete", false);
+                        continue;
+                    }
+
+                    if (admins.Contains(user))
+                    {
+                        Log($"Setting {user} as admin...", false);
+                        userAdminCmd = $"net localgroup \"Administrators\" \"{user}\" /ADD";
                     }
                     else
                     {
-
-                        if (!userList.Contains(user))
-                        {
-                            RemoveUser(user, true);
-                            continue;
-                        }
-
-                        if (admins.Contains(user))
-                        {
-                            Log($"Setting {user} as admin...", false);
-                            userAdminCmd = $"net localgroup \"Administrators\" \"{user}\" /ADD";
-                        }
-                        else
-                        {
-                            Log($"Setting {user} as normal user...", false);
-                            userAdminCmd = $"net localgroup \"Administrators\" \"{user}\" /DELETE";
-                        }
+                        Log($"Setting {user} as normal user...", false);
+                        userAdminCmd = $"net localgroup \"Administrators\" \"{user}\" /DELETE";
                     }
-                    CMD(userAdminCmd, false);
-
-                    if (!admins[0].Equals(user))
-                        CMD($"net user \"{user}\" \"{password}\"", false);
                 }
+                CMD(userAdminCmd, false);
 
+                if (!admins[0].Equals(user))
+                    CMD($"net user \"{user}\" \"{password}\"", false);
             }
         }
 
+        static bool malwareBytesDownloaded = false;
         private void InstallMalawareBytes()
         {
             if (File.Exists(@"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe"))
@@ -485,35 +367,119 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 catch (Exception ex)
                 {
                     Log(ex.Message, true);
-                    Log("Failed to install MalwareBytes", false);
+                    Log("Failed to install MalwareBytes.", false);
                 }
+            }
+        }
+
+        static bool firefoxDownloaded = false;
+        private void UpdateFirefox()
+        {
+            if (File.Exists(@"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"))
+            {
+                Log("Ensuring Firefox is up to date...", false);
+                Process.Start(@"C:\Program Files (x86)\Mozilla Firefox\updater.exe");
+            }
+            else
+            {
+                Log("Downloading Firefox...", false);
+                try
+                {
+                    using (var client = new WebClient())
+                    {
+                        client.DownloadFile("https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US", @"C:\Windows\Temp\firefox_setup.exe");
+                        while (client.IsBusy) { Thread.Sleep(500); }
+                    }
+
+                    Log("Installing Firefox...", false);
+                    CMD("C:\\Windows\\Temp\\firefox_setup.exe -ms", true);
+
+                    Log("Successfully installed Firefox!", false);
+                    File.Delete(@"C:\Windows\Temp\firefox_setup.exe");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex.Message, true);
+                    Log("Failed to install Firefox.", false);
+                }
+            }
+        }
+
+        private UpdateSession updateSession;
+        private ISearchResult searchResult;
+        private void UpdateWindows()
+        {
+            Log("Checking for Windows Updates...", false);
+            updateSession = new UpdateSession();
+            searchResult = updateSession.CreateUpdateSearcher().Search("IsInstalled=0 AND BrowseOnly=0 AND IsHidden=0");
+
+            if (searchResult.Updates.Count < 1)
+            {
+                Log("No Windows Updates to download.", false);
+            }
+            else
+            {
+                Log("Downloading Windows Updates...", false);
+                UpdateDownloader downloader = updateSession.CreateUpdateDownloader();
+                downloader.Updates = searchResult.Updates;
+                downloader.Download();
+
+                Log("Installing Windows Updates...", false);
+                UpdateCollection updatesToInstall = new UpdateCollection();
+                foreach (IUpdate update in searchResult.Updates)
+                {
+                    if (update.IsDownloaded)
+                    {
+                        updatesToInstall.Add(update);
+                    }
+                }
+
+                //install downloaded updates
+                IUpdateInstaller installer = updateSession.CreateUpdateInstaller();
+                installer.Updates = updatesToInstall;
+                IInstallationResult installationRes = installer.Install();
+
+                Log("Windows Update Complete!", false);
             }
         }
 
         private void ConfigurePolicy()
         {
             Log("Configuring password policy...", true);
-            CMD("net accounts /minpwlen:8", false);
+            CMD("wmic UserAccount set PasswordExpires=True", false);
+
+            CMD("net accounts /minpwlen:10", false);
             CMD("net accounts /maxpwage:30", false);
             CMD("net accounts /minpwage:10", false);
             CMD("net accounts /uniquepw:8", false);
+
+            using (var key = AccessRegistryKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
+                true))
+            {
+                if (key != null)
+                    key.SetValue("EnableLUA", 1);
+            }
         }
 
         private void BtnSecure_Click(object sender, EventArgs e)
         {
+            BtnSecure.Enabled = false;
             EnableAuditing();
             ConfigureUsers(TxtBoxPass.Text);
             ConfigurePolicy();
             InstallMalawareBytes();
+            UpdateFirefox();
+            //UpdateWindows();
             Log("The wall has been built!", false);
             Log("----------------------------------------------------", false);
+            BtnSecure.Enabled = true;
         }
 
         //TODO:
         /*
          * 'Build the Wall!' should be able to configure windows security settings 
-         * (UAC, Firewall, Password Requirements (ex. at least 10 characters long, password history, age policy) 
-         * (Account Policies), etc.)
+         * (UAC, Firewall (Account Policies), etc.)
          * Add easy way to turn on and off all FTP / 
          * Remote conection services / windows feature)
          *  Update firefox and Windows (DEFER FEATURE UPDATES)
