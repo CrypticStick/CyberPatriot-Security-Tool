@@ -1,25 +1,27 @@
 ﻿using Microsoft.Win32;
-using WUApiLib;
 using System;
 using System.Collections;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Security;
 using System.Security.Principal;
 using System.Text;
-using System.Threading;
-using System.Windows.Forms;
-using System.ComponentModel;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using WUApiLib;
 
 namespace Trump_s_Cyber_Security_Firewall_TM
 {
     public partial class MainForm : Form
     {
+        bool stop = false;
+
         public MainForm()
         {
             InitializeComponent();
+            MinimumSize = new System.Drawing.Size(948, 644);
             TxtBoxInfo.AppendText(Environment.UserName);
         }
 
@@ -73,25 +75,49 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         /// <summary>
         /// Logs the specified string to TxtBoxInfo on a new line.
         /// </summary>
-        private void Log(string message, bool debug)
+        private int Log(string message, bool debug)
         {
-            if (!ChkDebug.Checked && debug) return;
-            TxtBoxInfo.AppendText(Environment.NewLine + message);
+            if (!ChkDebug.Checked && debug) return -1;
+            TxtBoxInfo.AppendText(message + Environment.NewLine);
+
+            TxtBoxInfo.Focus();
+            TxtBoxInfo.SelectionStart = TxtBoxInfo.TextLength;
+            TxtBoxInfo.ScrollToCaret();
+
+            return TxtBoxInfo.Text.Split('\n').Length - 2;
         }
 
-        /// <summary>
-        /// Runs the specified command in command prompt, waiting until the process finishes or times out.
-        /// </summary>
-        /// <param name="command">The command to pass into command prompt.</param>
-        /// <param name="millisWait">Milliseconds until the process times out.</param>
-        private bool CMD(string command, int millisWait)
+        private void editLog(int line, string message, bool debug)
         {
-            Process cmdTask = new Process();
-            cmdTask.StartInfo.FileName = "CMD.exe";
-            cmdTask.StartInfo.Arguments = "/C " + command;
-            cmdTask.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            cmdTask.Start();
-            return cmdTask.WaitForExit(millisWait);
+            if (!ChkDebug.Checked && debug) return;
+
+            string[] lines = TxtBoxInfo.Text.Split('\n');
+
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (i == line)
+                {
+                    builder.Append(message + Environment.NewLine);
+                }
+                else
+                {
+                    builder.Append(lines[i]);
+                    builder.Append('\n');
+                }
+            }
+            TxtBoxInfo.Text = builder.ToString();
+
+            TxtBoxInfo.Focus();
+            TxtBoxInfo.SelectionStart = TxtBoxInfo.TextLength;
+            TxtBoxInfo.ScrollToCaret();
+        }
+
+        static private string loadingBar(int percentage)
+        {
+            return $"{percentage}% [" +
+                    $"{new string('=', Convert.ToInt32(percentage * 20 / 100))}" +
+                    $"{new string(' ', Convert.ToInt32((100 - percentage) * 20 / 100))}]";
         }
 
         /// <summary>
@@ -99,14 +125,19 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         /// </summary>
         /// <param name="command">The command to pass into command prompt.</param>
         /// <param name="waitForExit">Whether the thread will lock until process completes.</param>
-        private void CMD(string command, bool waitForExit)
+        private int CMD(string command, bool waitForExit)
         {
             Process cmdTask = new Process();
             cmdTask.StartInfo.FileName = "CMD.exe";
             cmdTask.StartInfo.Arguments = "/C " + command;
             cmdTask.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             cmdTask.Start();
-            if (waitForExit) cmdTask.WaitForExit();
+            if (waitForExit)
+            {
+                cmdTask.WaitForExit();
+                return cmdTask.ExitCode;
+            }
+            return 0;
         }
 
 
@@ -188,8 +219,10 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
         private void EnableAuditing()
         {
-            int endindex = 12;
+            if (stop) return;
+            int auditLine = Log("Enabling Auditing...", false);
 
+            int endindex = 12;
             OperatingSystem os = Environment.OSVersion;
             Version vs = os.Version;
 
@@ -225,6 +258,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         break;
                     default:
                         Log("This version of Windows is not supported!", false);
+                        editLog(auditLine, "Enabling Auditing... FAILED", false);
                         return;
                 }
             }
@@ -238,20 +272,25 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     key.SetValue(null, keyValue);
                     key.Close();
 
-                    Log("All auditing successfully enabled!", false);
+                    editLog(auditLine, "Enabling Auditing... DONE", false);
+                    return;
                 }
             }
-
+            editLog(auditLine, "Enabling Auditing... FAILED", false);
         }
 
         private void ConfigureUsers(string password)
         {
+            if (stop) return;
+
             if (TxtBoxPass.Text.Length < 8)
             {
-                Log("Please provide a password before configuring users.", false);
+                Log("Please provide a password before configuring users.", true);
+                Log("Skipping configuring users...", false);
                 return;
             }
 
+            int userLine = Log("Configuring users...", false);
             ArrayList userList;
             ArrayList admins;
             try
@@ -261,6 +300,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 if (userList.Count < 2 || !userList.Contains("Authorized Administrators:") || !userList.Contains("Authorized Users:"))
                 {
                     Log("Please paste \"Authorized Users\" and \"Authorized Administrators\" text in textbox.", false);
+                    editLog(userLine, "Configuring users... FAILED", false);
                     return;
                 }
 
@@ -291,6 +331,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             catch (Exception ex)
             {
                 Log("This list of names doesn't work.", false);
+                editLog(userLine, "Configuring users... FAILED", false);
                 return;
             }
 
@@ -308,9 +349,14 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
             foreach (String user in userNames)
             {
+                if (stop)
+                {
+                    editLog(userLine, "Configuring users... CANCELLED", false);
+                    return;
+                }
                 if (user.Equals("Administrator") || user.Equals("Guest"))
                 {
-                    Log($"Ensuring {user} is disabled...", false);
+                    Log($"Ensuring {user} is disabled...", true);
                     userAdminCmd = $"net user \"{user}\" /active:no";
                 }
                 else
@@ -318,19 +364,19 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
                     if (!userList.Contains(user))
                     {
-                        Log($"Deleting \"{user}\"...", false);
+                        Log($"Deleting \"{user}\"...", true);
                         CMD($"net user \"{user}\" /delete", false);
                         continue;
                     }
 
                     if (admins.Contains(user))
                     {
-                        Log($"Setting {user} as admin...", false);
+                        Log($"Setting {user} as admin...", true);
                         userAdminCmd = $"net localgroup \"Administrators\" \"{user}\" /ADD";
                     }
                     else
                     {
-                        Log($"Setting {user} as normal user...", false);
+                        Log($"Setting {user} as normal user...", true);
                         userAdminCmd = $"net localgroup \"Administrators\" \"{user}\" /DELETE";
                     }
                 }
@@ -339,80 +385,221 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 if (!admins[0].Equals(user))
                     CMD($"net user \"{user}\" \"{password}\"", false);
             }
+            editLog(userLine, "Configuring users... DONE", false);
         }
 
-        static bool malwareBytesDownloaded = false;
+        private void InstallProgram(string url, string name, string args)
+        {
+            int downloadLine = Log($"Downloading {name}...", false);
+            try
+            {
+                using (var client = new WebClient())
+                {
+                    client.DownloadFileAsync(new Uri(url), $"C:\\Windows\\Temp\\{name}_setup.exe");
+                    while (client.IsBusy)
+                    {
+                        client.DownloadProgressChanged += (s, e) =>
+                        {
+                            editLog(downloadLine, $"Downloading {name}... {loadingBar(e.ProgressPercentage)}", false);
+                        };
+                        if (stop)
+                        {
+                            client.CancelAsync();
+                            editLog(downloadLine, $"Downloading {name}... CANCELLED", false);
+                            return;
+                        }
+                        Task.Delay(500);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex.Message, true);
+                editLog(downloadLine, $"Downloading {name}... FAILED", false);
+                return;
+            }
+
+            try
+            { 
+            int installLine = Log($"Installing {name}...", false);
+
+                int exitCode = CMD($"C:\\Windows\\Temp\\{name}_setup.exe {args}" , true);
+
+                if(exitCode == 0)
+                    editLog(installLine, $"Installing {name}... DONE", false);
+                else
+                {
+                    editLog(installLine, $"Installing {name}... FAILED", false);
+                }
+                File.Delete($"C:\\Windows\\Temp\\{name}_setup.exe");
+            }
+            catch (Exception ex)
+            {
+                Log(ex.Message, true);
+                editLog(installLine, $"Installing {name}... FAILED", false);
+            }
+        }
+
         private void InstallMalawareBytes()
         {
+            if (stop) return;
             if (File.Exists(@"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe"))
             {
-                Log("MalawareBytes already installed.", false);
+                Log("MalwareBytes already installed.", true);
+                Log("Skipping installing MalwareBytes...", false);
             }
             else
             {
-                Log("Downloading MalwareBytes...", false);
-                try
-                {
-                    using (var client = new WebClient())
-                    {
-                        client.DownloadFile("https://downloads.malwarebytes.com/file/mb3/", "C:\\Windows\\Temp\\mb3_setup.exe");
-                        while (client.IsBusy) { Task.Delay(500); }
-                    }
-
-                    Log("Installing MalwareBytes...", false);
-                    CMD("C:\\Windows\\Temp\\mb3_setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log"
-                        , true);
-
-                    Log("Successfully installed MalwareBytes!", false);
-                    File.Delete("C:\\Windows\\Temp\\mb3_setup.exe");
-                }
-                catch (Exception ex)
-                {
-                    Log(ex.Message, true);
-                    Log("Failed to install MalwareBytes.", false);
-                }
+                InstallProgram("https://downloads.malwarebytes.com/file/mb3/",
+                    "MalwareBytes",
+                    "/VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log");
             }
         }
 
         private void UpdateFirefox()
         {
+            if (stop) return;
             if (File.Exists(@"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"))
             {
                 Log("Ensuring Firefox is up to date...", false);
                 Process.Start(@"C:\Program Files (x86)\Mozilla Firefox\updater.exe");
             }
+            else if (File.Exists(@"C:\Program Files\Mozilla Firefox\firefox.exe"))
+            {
+                Log("Ensuring Firefox is up to date...", false);
+                Process.Start(@"C:\Program Files\Mozilla Firefox\updater.exe");
+            }
             else
             {
-                Log("Downloading Firefox...", false);
-                try
+                InstallProgram("https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US",
+                    "Firefox",
+                    "-ms");
+            }
+        }
+
+        public class search_OnCompleted : ISearchCompletedCallback
+        {
+            MainForm form;
+            public search_OnCompleted(MainForm mainForm)
+            {
+                this.form = mainForm;
+            }
+            public void Invoke(ISearchJob downloadJob, ISearchCompletedCallbackArgs e)
+            {
+                if (form.stop)
                 {
-                    using (var client = new WebClient())
-                    {
-                        client.DownloadFile("https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US", @"C:\Windows\Temp\firefox_setup.exe");
-                        while (client.IsBusy) { Task.Delay(500); }
-                    }
-
-                    Log("Installing Firefox...", false);
-                    CMD("C:\\Windows\\Temp\\firefox_setup.exe -ms", true);
-
-                    Log("Successfully installed Firefox!", false);
-                    File.Delete(@"C:\Windows\Temp\firefox_setup.exe");
+                    form.editLog(form.searchLine, $"Checking for Windows Updates... CANCELLED", false);
                 }
-                catch (Exception ex)
+                else
                 {
-                    Log(ex.Message, true);
-                    Log("Failed to install Firefox.", false);
+                    form.searched = true;
+                    form.editLog(form.searchLine, $"Checking for Windows Updates... DONE",
+                        false);
                 }
             }
         }
 
-        private UpdateSession updateSession;
-        private ISearchResult searchResult;
+        public class download_OnProgressChanged : IDownloadProgressChangedCallback
+        {
+            MainForm form;
+            public download_OnProgressChanged(MainForm mainForm)
+            {
+                this.form = mainForm;
+            }
+            public void Invoke(IDownloadJob downloadJob, IDownloadProgressChangedCallbackArgs e)
+            {
+                form.editLog(form.downloadLine, $"Downloading Windows Updates... {loadingBar(e.Progress.PercentComplete)}", false);
+            }
+        }
+
+        public class download_OnCompleted : IDownloadCompletedCallback
+        {
+            MainForm form;
+            public download_OnCompleted(MainForm mainForm)
+            {
+                this.form = mainForm;
+            }
+            public void Invoke(IDownloadJob downloadJob, IDownloadCompletedCallbackArgs e)
+            {
+                if (form.stop)
+                {
+                    form.editLog(form.downloadLine, $"Downloading Windows Updates... CANCELLED", false);
+                }
+                else
+                {
+                    form.downloaded = true;
+                    form.editLog(form.downloadLine, $"Downloading Windows Updates... 100% [========DONE========]",
+                        false);
+                }
+            }
+        }
+
+        public class install_OnProgressChanged : IInstallationProgressChangedCallback
+        {
+            MainForm form;
+            public install_OnProgressChanged(MainForm mainForm)
+            {
+                this.form = mainForm;
+            }
+            public void Invoke(IInstallationJob downloadJob, IInstallationProgressChangedCallbackArgs e)
+            {
+                form.editLog(form.installLine, $"Installing Windows Updates... {loadingBar(e.Progress.PercentComplete)}", false);
+            }
+        }
+
+        public class install_OnCompleted : IInstallationCompletedCallback
+        {
+            MainForm form;
+            public install_OnCompleted(MainForm mainForm)
+            {
+                this.form = mainForm;
+            }
+            public void Invoke(IInstallationJob downloadJob, IInstallationCompletedCallbackArgs e)
+            {
+                if (form.stop)
+                {
+                    form.editLog(form.installLine, $"Installing Windows Updates... CANCELLED", false);
+                }
+                else
+                {
+                    form.installed = true;
+                    form.editLog(form.installLine, $"Installing Windows Updates... 100% [========DONE========]",
+                        false);
+                }
+            }
+        }
+
+        private bool searched;
+        private bool downloaded;
+        private bool installed;
+        private int searchLine;
+        private int downloadLine;
+        private int installLine;
         private void UpdateWindows()
         {
-            Log("Checking for Windows Updates...", false);
-            updateSession = new UpdateSession();
-            searchResult = updateSession.CreateUpdateSearcher().Search("IsInstalled=0 AND BrowseOnly=0 AND IsHidden=0");
+            if (stop) return;
+
+            searched = false;
+            downloaded = false;
+            installed = false;
+            searchLine = Log("Checking for Windows Updates...", false);
+            UpdateSession updateSession = new UpdateSession();
+
+            IUpdateSearcher updateSearcher = updateSession.CreateUpdateSearcher();
+            updateSearcher.Online = true;
+            ISearchJob searchJob = updateSearcher.BeginSearch("IsInstalled=0 AND BrowseOnly=0 AND IsHidden=0", new search_OnCompleted(this), null);
+            while (!searched)
+            {
+                if (stop)
+                {
+                    searchJob.RequestAbort();
+                    editLog(searchLine, "Checking for Windows Updates... CANCELLED", false);
+                    return;
+                }
+                Task.Delay(500);
+            }
+            ISearchResult searchResult = updateSearcher.EndSearch(searchJob);
+            editLog(searchLine, "Checking for Windows Updates... DONE", false);
 
             if (searchResult.Updates.Count < 1)
             {
@@ -420,12 +607,23 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             else
             {
-                Log("Downloading Windows Updates...", false);
+                downloadLine = Log("Downloading Windows Updates...", false);
                 UpdateDownloader downloader = updateSession.CreateUpdateDownloader();
                 downloader.Updates = searchResult.Updates;
-                downloader.Download();
+                IDownloadJob downloadJob = downloader.BeginDownload(new download_OnProgressChanged(this), new download_OnCompleted(this), null);
+                while (!downloaded)
+                {
+                    if (stop)
+                    {
+                        downloadJob.RequestAbort();
+                        editLog(downloadLine, "Downloading Windows Updates... CANCELLED", false);
+                        return;
+                    }
+                    Task.Delay(500);
+                }
+                downloader.EndDownload(downloadJob);
+                
 
-                Log("Installing Windows Updates...", false);
                 UpdateCollection updatesToInstall = new UpdateCollection();
                 foreach (IUpdate update in searchResult.Updates)
                 {
@@ -435,56 +633,123 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     }
                 }
 
-                //install downloaded updates
+                if(updatesToInstall.Count < 1)
+                {
+                    editLog(downloadLine, "Downloading Windows Updates... FAILED", false);
+                    return;
+                } else
+                {
+                    editLog(downloadLine, "Downloading Windows Updates... DONE", false);
+                }
+
+                installLine = Log("Installing Windows Updates...", false);
                 IUpdateInstaller installer = updateSession.CreateUpdateInstaller();
                 installer.Updates = updatesToInstall;
-                IInstallationResult installationRes = installer.Install();
-
-                Log("Windows Update Complete!", false);
+                IInstallationJob installationJob = installer.BeginInstall(new install_OnProgressChanged(this), new install_OnCompleted(this), null);
+                while (!installed)
+                {
+                    if (stop)
+                    {
+                        installationJob.RequestAbort();
+                        editLog(installLine, "Installing Windows Updates... CANCLLED", false);
+                        return;
+                    }
+                    Task.Delay(500);
+                }
+                installer.EndInstall(installationJob);
+                editLog(installLine, "Installing Windows Updates... DONE", false);
             }
         }
 
+
         private void ConfigurePolicy()
         {
-            Log("Configuring password policy...", true);
-            CMD("wmic UserAccount set PasswordExpires=True", false);
+            if (stop) return;
 
-            CMD("net accounts /minpwlen:10", false);
-            CMD("net accounts /maxpwage:30", false);
-            CMD("net accounts /minpwage:10", false);
-            CMD("net accounts /uniquepw:8", false);
+            int policyLine = Log("Configuring password policy...", false);
 
-            using (var key = AccessRegistryKey(
-                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
-                true))
+            try
             {
-                if (key != null)
-                    key.SetValue("EnableLUA", 1);
+                CMD("wmic UserAccount set PasswordExpires=True", false);
+
+                CMD("net accounts /minpwlen:10", false);
+                CMD("net accounts /maxpwage:30", false);
+                CMD("net accounts /minpwage:10", false);
+                CMD("net accounts /uniquepw:8", false);
+
+                using (var key = AccessRegistryKey(
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
+                    true))
+                {
+                    if (key != null)
+                        key.SetValue("EnableLUA", 1);
+                }
+            } catch (Exception ex)
+            {
+                Log(ex.Message, true);
+                editLog(policyLine, "Configuring password policy... FAILED", false);
+                return;
             }
+            editLog(policyLine, "Configuring password policy... DONE", false);
         }
 
         private void listOfTasks(object sender, DoWorkEventArgs e)
         {
+            ProgressBar.Maximum = 6;
+            ProgressBar.Step = 1;
+            ProgressBar.Value = 0;
+
             EnableAuditing();
+            ++ProgressBar.Value;
             ConfigureUsers(TxtBoxPass.Text);
+            ++ProgressBar.Value;
             ConfigurePolicy();
+            ++ProgressBar.Value;
             InstallMalawareBytes();
+            ++ProgressBar.Value;
             UpdateFirefox();
-            //UpdateWindows();
+            ++ProgressBar.Value;
+            UpdateWindows();
+            ++ProgressBar.Value;
         }
 
+        BackgroundWorker tasks;
         private async void BtnSecure_Click(object sender, EventArgs e)
         {
             BtnSecure.Enabled = false;
-
-            var tasks = new BackgroundWorker();
+            tasks = new BackgroundWorker();
             tasks.DoWork += new DoWorkEventHandler(listOfTasks);
             tasks.RunWorkerAsync();
-            while (tasks.IsBusy) await Task.Delay(500);
 
-            Log("The wall has been built!", false);
-            Log("----------------------------------------------------", false);
+            BtnStop.Enabled = true;
+            while (tasks.IsBusy)
+            {
+                await Task.Delay(500);
+                if (stop) try { tasks.CancelAsync(); } catch (Exception ex) { };
+            }
+
+            if (stop)
+            {
+                Log("The wall was not built ;(", false);
+                Log("----------------------------------------------------", false);
+            }
+            else
+            {
+                Log("The wall has been built!", false);
+                Log("----------------------------------------------------", false);
+            }
+
+            ProgressBar.Value = 0;
+            stop = false;
+            BtnStop.Enabled = false;
             BtnSecure.Enabled = true;
+        }
+
+        private void BtnStop_Click(object sender, EventArgs e)
+        {
+            Log("Cancelling process...", false);
+            stop = true;
+            BtnStop.Enabled = false;
         }
 
         //TODO:
