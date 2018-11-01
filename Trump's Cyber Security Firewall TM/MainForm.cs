@@ -21,7 +21,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         public MainForm()
         {
             InitializeComponent();
-            MinimumSize = new System.Drawing.Size(512, 512);
+            MinimumSize = new System.Drawing.Size(690, 722);
             TxtBoxInfo.AppendText(Environment.UserName);
         }
 
@@ -73,6 +73,85 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 ElevateUser();
             }
             UpdateProgramList();
+        }
+
+        public delegate int mTask(PortableNumber p, params object[] args);
+        public class PortableNumber
+        {
+            public PortableNumber(int n) { Number = n; }
+            public int Number { get; set; }
+        }
+        /// <summary>
+        /// Takes a function and runs it with automatic logging.
+        /// </summary>
+        public class LogTask
+        {
+            mTask func;
+            MainForm form;
+            string message = null;
+            object[] args = { 0 };
+            PortableNumber percent = new PortableNumber(-1);
+            bool percentBased = false;
+            int logLine = -1;
+
+            /// <summary>
+            /// Takes a function and runs it with automatic logging. 
+            /// <para>Requires <see cref="string"/> message and <see cref="Task"/>, accepts any extra parameters.</para>
+            /// </summary>
+            /// <param name="message">The message that will be displayed while the function is running.</param>
+            ///             /// <param name="func"></param>
+            /// <param name="args">An array of any parameters that the specified function requires.</param>
+            public LogTask(string message, mTask func, params object[] args)
+            {
+                this.func = func;
+                form = (MainForm)(func.Target);
+                this.message = message;
+                this.args = args;
+                logLine = form.Log(message + "...", false);
+
+                IAsyncResult result = func.BeginInvoke(this.percent, args, null, null);
+
+                int percent = -1;
+                while (!result.IsCompleted)
+                {
+                    if (percent != this.percent.Number)
+                    {
+                        percentBased = true;
+                        percent = this.percent.Number;
+                        Progress(percent);
+                    }
+                }
+                int code = func.EndInvoke(result);
+                if (form.stop) Cancelled();
+                else if (code == 0) Done();
+                else Failed();
+            }
+            public static string LoadingBar(int percentage)
+            {
+                string line = new string('=', Convert.ToInt32(percentage * 20 / 100));
+                return $"{percentage}% [" +
+                        $"{line}" +
+                        $"{new string(' ', 20 - line.Length)}]";
+            }
+            private void Progress(int percent)
+            {
+                form.EditLog(logLine, message + "... " + LoadingBar(percent), false);
+            }
+            private void Done()
+            {
+                if (percentBased)
+                    form.EditLog(logLine, message + "... 100% [========DONE========]", false);
+                else
+                    form.EditLog(logLine, message + "... DONE", false);
+            }
+            private void Failed()
+            {
+                form.EditLog(logLine, message + "... FAILED", false);
+            }
+            private void Cancelled()
+            {
+                form.EditLog(logLine, message + "... CANCELLED", false);
+            }
         }
 
         private void UpdateProgramList()
@@ -142,14 +221,6 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             TxtBoxInfo.ScrollToCaret();
         }
 
-        static private string LoadingBar(int percentage)
-        {
-            string line = new string('=', Convert.ToInt32(percentage * 20 / 100));
-            return $"{percentage}% [" +
-                    $"{line}" +
-                    $"{new string(' ', 20 - line.Length)}]";
-        }
-
         /// <summary>
         /// Runs the specified command in command prompt.
         /// </summary>
@@ -170,7 +241,6 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             return 0;
         }
-
 
         /// <summary>
         /// Converts an array of bytes into a hexideciamal string.
@@ -249,10 +319,9 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
-        private void EnableAuditing()
+        private int EnableAuditing(PortableNumber p, params object[] args)
         {
-            if (stop) return;
-            int auditLine = Log("Enabling Auditing...", false);
+            if (stop) return 1;
 
             int endindex = 12;
             OperatingSystem os = Environment.OSVersion;
@@ -290,8 +359,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         break;
                     default:
                         Log("This version of Windows is not supported!", false);
-                        EditLog(auditLine, "Enabling Auditing... FAILED", false);
-                        return;
+                        return 2;
                 }
             }
 
@@ -303,26 +371,23 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     EditByteArray(ref keyValue, 12, endindex, 0x03); //Enable all auditing
                     key.SetValue(null, keyValue);
                     key.Close();
-
-                    EditLog(auditLine, "Enabling Auditing... DONE", false);
-                    return;
+                    return 0;
                 }
             }
-            EditLog(auditLine, "Enabling Auditing... FAILED", false);
+            return 3;
         }
 
-        private void ConfigureUsers(string password)
+        private int ConfigureUsers(PortableNumber p, params object[] args)
         {
-            if (stop) return;
+            if (stop) return 1;
 
             if (TxtBoxPass.Text.Length < 8)
             {
                 Log("Please provide a password before configuring users.", true);
-                Log("Skipping configuring users...", false);
-                return;
+                Log("Skipping configuring users...", true);
+                return 0;
             }
 
-            int userLine = Log("Configuring users...", false);
             ArrayList userList;
             ArrayList admins;
             try
@@ -332,8 +397,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 if (userList.Count < 2 || !userList.Contains("Authorized Administrators:") || !userList.Contains("Authorized Users:"))
                 {
                     Log("Please paste \"Authorized Users\" and \"Authorized Administrators\" text in textbox.", false);
-                    EditLog(userLine, "Configuring users... FAILED", false);
-                    return;
+                    return 2;
                 }
 
                 for (int i = 0; i < userList.Count; i++) //removes everything except users
@@ -364,8 +428,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             {
                 Log(ex.Message, true);
                 Log("The provided list of names doesn't work.", false);
-                EditLog(userLine, "Configuring users... FAILED", false);
-                return;
+                return 3;
             }
 
             String[] userNames = null;
@@ -382,11 +445,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
             foreach (String user in userNames)
             {
-                if (stop)
-                {
-                    EditLog(userLine, "Configuring users... CANCELLED", false);
-                    return;
-                }
+                if (stop) return 1;
                 if (user.Equals("Administrator") || user.Equals("Guest"))
                 {
                     Log($"Ensuring {user} is disabled...", true);
@@ -394,7 +453,6 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 }
                 else
                 {
-
                     if (!userList.Contains(user))
                     {
                         Log($"Deleting \"{user}\"...", true);
@@ -416,111 +474,150 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 CMD(userAdminCmd, false);
 
                 if (!admins[0].Equals(user))
-                    CMD($"net user \"{user}\" \"{password}\"", false);
+                    CMD($"net user \"{user}\" \"{TxtBoxPass.Text}\"", false);
             }
-            EditLog(userLine, "Configuring users... DONE", false);
+            return 0;
         }
 
-        private void UninstallProgram(string command, string name)
+
+
+        private int ConfigurePolicy(PortableNumber p, params object[] args)
         {
+            if (stop) return 1;
             try
             {
-                int installLine = Log($"Uninstalling {name}...", false);
-                int exitCode = -1;
+                CMD("wmic UserAccount set PasswordExpires=True", false);
 
-                if (command != null || command != "")
-                exitCode = CMD(command, true);
-                else
-                {
-                    EditLog(installLine, $"Uninstalling {name}... FAILED", false);
-                    return;
-                }
+                CMD("net accounts /minpwlen:10", false);
+                CMD("net accounts /maxpwage:30", false);
+                CMD("net accounts /minpwage:10", false);
+                CMD("net accounts /uniquepw:8", false);
 
-                if (exitCode >= 0)
-                    EditLog(installLine, $"Uninstalling {name}... DONE", false);
-                else
+                using (RegistryKey key = AccessRegistryKey(
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
+                    true))
                 {
-                    EditLog(installLine, $"Uninstalling {name}... FAILED", false);
+                    if (key != null)
+                        key.SetValue("EnableLUA", 1);
                 }
             }
             catch (Exception ex)
             {
                 Log(ex.Message, true);
-                EditLog(installLine, $"Uninstalling {name}... FAILED", false);
+                return 2;
+            }
+            return 0;
+        }
+
+        class mWebClient : WebClient
+        {
+            private PortableNumber PortableNumber;
+            public mWebClient(PortableNumber p)
+            {
+                PortableNumber = p;
+            }
+            public void SetNumber(int n)
+            {
+                PortableNumber.Number = n;
             }
         }
-        private void InstallProgram(string url, string name, string args)
+
+        private int DownloadProgram(PortableNumber p, params object[] args)
         {
-            int downloadLine = Log($"Downloading {name}...", false);
             try
             {
-                using (var client = new WebClient())
+                using (var client = new mWebClient(p))
                 {
-                    client.DownloadFileAsync(new Uri(url), $"C:\\Windows\\Temp\\{name}_setup.exe");
+                    Task.Delay(3000);
+                    client.DownloadFileAsync(new Uri((string)args[0]), $"C:\\Windows\\Temp\\{(string)args[1]}_setup.exe");
                     client.DownloadProgressChanged += (s, e) =>
                     {
-                        EditLog(downloadLine, $"Downloading {name}... {LoadingBar(e.ProgressPercentage)}", false);
-                    };
-                    while (client.IsBusy)
-                    {
-
+                        client.SetNumber(e.ProgressPercentage);
                         if (stop)
                         {
                             client.CancelAsync();
-                            EditLog(downloadLine, $"Downloading {name}... CANCELLED", false);
                             return;
                         }
                         Task.Delay(500);
-                    }
+                    };
+                    while (client.IsBusy)
+                        if (stop) return 1;
                 }
             }
             catch (Exception ex)
             {
                 Log(ex.Message, true);
-                EditLog(downloadLine, $"Downloading {name}... FAILED", false);
-                return;
+                return 2;
             }
-
+            return 0;
+        }
+        private int UninstallProgram(PortableNumber p, params object[] args)
+        {
             try
             {
-                int installLine = Log($"Installing {name}...", false);
+                string uninstallString = (string)args[0];
+                int exitCode = -1;
 
-                int exitCode = CMD($"C:\\Windows\\Temp\\{name}_setup.exe {args}", true);
-
-                if (exitCode >= 0)
-                    EditLog(installLine, $"Installing {name}... DONE", false);
-                else
-                {
-                    EditLog(installLine, $"Installing {name}... FAILED", false);
-                }
-                File.Delete($"C:\\Windows\\Temp\\{name}_setup.exe");
+                if (uninstallString != null || uninstallString != "")
+                    exitCode = CMD(uninstallString, true);
+                else return 2;
+                if (exitCode < 0) return 3;
+                return 0;
             }
             catch (Exception ex)
             {
                 Log(ex.Message, true);
-                EditLog(installLine, $"Installing {name}... FAILED", false);
+                return 4;
             }
         }
-
-        private void InstallMalawareBytes()
+        private int InstallProgram(PortableNumber p, params object[] args)
         {
-            if (stop) return;
+            if (File.Exists($"C:\\Windows\\Temp\\{args[0]}_setup.exe"))
+                try
+                {
+                    string name = (string)args[0];
+                    string arg = (string)args[1];
+                    int exitCode = CMD($"C:\\Windows\\Temp\\{name}_setup.exe {arg}", true);
+
+                    if (exitCode < 0) return 2;
+                    File.Delete($"C:\\Windows\\Temp\\{name}_setup.exe");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex.Message, true);
+                    return 3;
+                }
+            else
+            {
+                return 4;
+            }
+            return 0;
+        }
+
+        private int UpdateMalwareBytes(PortableNumber p, params object[] arg)
+        {
+            if (stop) return 1;
             if (File.Exists(@"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe"))
             {
                 Log("MalwareBytes already installed.", true);
-                Log("Skipping installing MalwareBytes...", false);
             }
             else
             {
-                InstallProgram("https://downloads.malwarebytes.com/file/mb3/",
+                new LogTask("Downloading MalwareBytes",
+                    DownloadProgram,
+                    "https://downloads.malwarebytes.com/file/mb3/",
+                    "MalwareBytes");
+
+                new LogTask("Installing MalwareBytes",
+                    InstallProgram,
                     "MalwareBytes",
                     "/VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log");
             }
+            return 0;
         }
-
-        private void UpdateFirefox()
+        private int UpdateFirefox(PortableNumber p, params object[] arg)
         {
-            if (stop) return;
+            if (stop) return 1;
             if (File.Exists(@"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"))
             {
                 Log("Ensuring Firefox is up to date...", false);
@@ -533,9 +630,63 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             else
             {
-                InstallProgram("https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US",
+                new LogTask("Downloading Firefox",
+                    DownloadProgram,
+                    "https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US",
+                    "Firefox");
+
+                new LogTask("Installing Firefox",
+                    InstallProgram,
                     "Firefox",
                     "-ms");
+            }
+            return 0;
+        }
+
+        private int UninstallPrograms(PortableNumber p, params object[] args)
+        {
+            if (ChkLstBxPrograms.CheckedItems.Count < 1)
+            {
+                Log("No programs were selected for uninstallation.", false);
+                return 0;
+            }
+
+            using (RegistryKey key = AccessRegistryKey(
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        true))
+            {
+                if (key != null)
+                {
+
+                    foreach (string program in key.GetSubKeyNames())
+                    {
+                        try
+                        {
+                            string programName = Convert.ToString(key.OpenSubKey(program).GetValue("DisplayName"));
+                            if (ChkLstBxPrograms.CheckedItems.Contains(programName))
+                            {
+                                string programStringQuiet = Convert.ToString(key.OpenSubKey(program).GetValue("QuietUninstallString"));
+                                string programString = Convert.ToString(key.OpenSubKey(program).GetValue("UninstallString"));
+                                if (programStringQuiet != null && programStringQuiet != "")
+                                    new LogTask($"Uninstalling {programName}", UninstallProgram, programStringQuiet);
+                                else if ((programString != null && programString != ""))
+                                    new LogTask($"Uninstalling {programName}", UninstallProgram, programString);
+                                else Log($"Cannot uninstall {programName}.", false);
+                                UpdateProgramList();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex.Message, true);
+                            //return 2;
+                        }
+                    }
+                    return 0;
+                }
+                else
+                {
+                    return 3;
+                }
             }
         }
 
@@ -570,7 +721,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             public void Invoke(IDownloadJob downloadJob, IDownloadProgressChangedCallbackArgs e)
             {
-                form.EditLog(form.downloadLine, $"Downloading Windows Updates... {LoadingBar(e.Progress.PercentComplete)}", false);
+                form.EditLog(form.downloadLine, $"Downloading Windows Updates... {LogTask.LoadingBar(e.Progress.PercentComplete)}", false);
             }
         }
 
@@ -605,7 +756,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             public void Invoke(IInstallationJob downloadJob, IInstallationProgressChangedCallbackArgs e)
             {
-                form.EditLog(form.installLine, $"Installing Windows Updates... {LoadingBar(e.Progress.PercentComplete)}", false);
+                form.EditLog(form.installLine, $"Installing Windows Updates... {LogTask.LoadingBar(e.Progress.PercentComplete)}", false);
             }
         }
 
@@ -724,97 +875,23 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
-
-        private void ConfigurePolicy()
-        {
-            if (stop) return;
-
-            int policyLine = Log("Configuring password policy...", false);
-
-            try
-            {
-                CMD("wmic UserAccount set PasswordExpires=True", false);
-
-                CMD("net accounts /minpwlen:10", false);
-                CMD("net accounts /maxpwage:30", false);
-                CMD("net accounts /minpwage:10", false);
-                CMD("net accounts /uniquepw:8", false);
-
-                using (RegistryKey key = AccessRegistryKey(
-                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
-                    true))
-                {
-                    if (key != null)
-                        key.SetValue("EnableLUA", 1);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(ex.Message, true);
-                EditLog(policyLine, "Configuring password policy... FAILED", false);
-                return;
-            }
-            EditLog(policyLine, "Configuring password policy... DONE", false);
-        }
-
-        private void UninstallPrograms()
-        {
-            if (ChkLstBxPrograms.CheckedItems.Count < 1)
-            {
-                Log("No programs were selected for uninstallation. Continuing...", false);
-                return;
-            }
-
-            int uninstallLine = Log("Uninstalling programs...", false);
-
-            using (RegistryKey key = AccessRegistryKey(
-        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-        true))
-            {
-                if (key != null)
-                {
-                    foreach (string program in key.GetSubKeyNames())
-                    {
-                        string programName = Convert.ToString(key.OpenSubKey(program).GetValue("DisplayName"));
-                        if (ChkLstBxPrograms.CheckedItems.Contains(programName))
-                        {
-
-                            string programStringQuiet = Convert.ToString(key.OpenSubKey(program).GetValue("QuietUninstallString"));
-                            string programString = Convert.ToString(key.OpenSubKey(program).GetValue("UninstallString"));
-                            if (programStringQuiet != null || programStringQuiet != "")
-                                UninstallProgram(programStringQuiet, programName);
-                            else
-                                UninstallProgram(programString, programName);
-                            UpdateProgramList();
-                        }
-
-                    }
-                    EditLog(uninstallLine, "Uninstalling programs... DONE", false);
-                }
-                else
-                {
-                    EditLog(uninstallLine, "Uninstalling programs... FAILED", false);
-                }
-            }
-        }
-
         private void ListOfTasks(object sender, DoWorkEventArgs e)
         {
             ProgressBar.Maximum = 7;
             ProgressBar.Step = 1;
             ProgressBar.Value = 0;
 
-            EnableAuditing();
+            new LogTask("Enabling auditing", EnableAuditing);
             ++ProgressBar.Value;
-            ConfigureUsers(TxtBoxPass.Text);
+            new LogTask("Configuring users", ConfigureUsers);
             ++ProgressBar.Value;
-            ConfigurePolicy();
+            new LogTask("Configuring policy", ConfigurePolicy);
             ++ProgressBar.Value;
-            InstallMalawareBytes();
+            new LogTask("Setting up MalwareBytes", UpdateMalwareBytes);
             ++ProgressBar.Value;
-            UpdateFirefox();
+            new LogTask("Setting up Firefox", UpdateFirefox);
             ++ProgressBar.Value;
-            UninstallPrograms();
+            new LogTask("Uninstalling programs", UninstallPrograms);
             ++ProgressBar.Value;
             UpdateWindows();
             ++ProgressBar.Value;
@@ -839,6 +916,8 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         Log(ex.Message, true);
                     }
             }
+
+            UpdateProgramList();
 
             if (stop)
             {

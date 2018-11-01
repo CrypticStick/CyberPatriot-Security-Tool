@@ -43,9 +43,9 @@
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.TabPgConfig = new System.Windows.Forms.TabPage();
             this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.ChkDebug = new System.Windows.Forms.CheckBox();
-            this.ChkLstBxPrograms = new System.Windows.Forms.CheckedListBox();
             this.LblProgramList = new System.Windows.Forms.Label();
+            this.ChkLstBxPrograms = new System.Windows.Forms.CheckedListBox();
+            this.ChkDebug = new System.Windows.Forms.CheckBox();
             this.tabControl1.SuspendLayout();
             this.TabPgConfig.SuspendLayout();
             this.tabPage2.SuspendLayout();
@@ -57,12 +57,13 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.TxtBoxInfo.Font = new System.Drawing.Font("Consolas", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.TxtBoxInfo.Location = new System.Drawing.Point(6, 363);
+            this.TxtBoxInfo.Location = new System.Drawing.Point(8, 412);
+            this.TxtBoxInfo.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.TxtBoxInfo.Multiline = true;
             this.TxtBoxInfo.Name = "TxtBoxInfo";
             this.TxtBoxInfo.ReadOnly = true;
             this.TxtBoxInfo.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.TxtBoxInfo.Size = new System.Drawing.Size(462, 67);
+            this.TxtBoxInfo.Size = new System.Drawing.Size(619, 198);
             this.TxtBoxInfo.TabIndex = 1;
             // 
             // LblInfo
@@ -71,9 +72,10 @@
             | System.Windows.Forms.AnchorStyles.Left)));
             this.LblInfo.AutoSize = true;
             this.LblInfo.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.LblInfo.Location = new System.Drawing.Point(6, 339);
+            this.LblInfo.Location = new System.Drawing.Point(8, 382);
+            this.LblInfo.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.LblInfo.Name = "LblInfo";
-            this.LblInfo.Size = new System.Drawing.Size(30, 15);
+            this.LblInfo.Size = new System.Drawing.Size(36, 18);
             this.LblInfo.TabIndex = 2;
             this.LblInfo.Text = "Info:";
             // 
@@ -82,21 +84,25 @@
             this.TxtBoxUsers.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.TxtBoxUsers.Location = new System.Drawing.Point(281, 29);
+            this.TxtBoxUsers.Location = new System.Drawing.Point(388, 32);
+            this.TxtBoxUsers.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.TxtBoxUsers.Multiline = true;
             this.TxtBoxUsers.Name = "TxtBoxUsers";
             this.TxtBoxUsers.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.TxtBoxUsers.Size = new System.Drawing.Size(176, 207);
+            this.TxtBoxUsers.Size = new System.Drawing.Size(233, 332);
             this.TxtBoxUsers.TabIndex = 4;
             // 
             // BtnSecure
             // 
+            this.BtnSecure.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.BtnSecure.Enabled = false;
             this.BtnSecure.Font = new System.Drawing.Font("Comic Sans MS", 24F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.BtnSecure.ForeColor = System.Drawing.Color.Red;
-            this.BtnSecure.Location = new System.Drawing.Point(3, 5);
+            this.BtnSecure.Location = new System.Drawing.Point(8, 4);
+            this.BtnSecure.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.BtnSecure.Name = "BtnSecure";
-            this.BtnSecure.Size = new System.Drawing.Size(300, 300);
+            this.BtnSecure.Size = new System.Drawing.Size(400, 369);
             this.BtnSecure.TabIndex = 5;
             this.BtnSecure.Text = "Build the wall!";
             this.Tltp_Btns.SetToolTip(this.BtnSecure, "Configures system for optimal security.\r\nAlso installs anti-malaware and enables " +
@@ -106,12 +112,14 @@
             // 
             // BtnStop
             // 
+            this.BtnStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.BtnStop.Enabled = false;
             this.BtnStop.Font = new System.Drawing.Font("Comic Sans MS", 24F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.BtnStop.ForeColor = System.Drawing.Color.Red;
-            this.BtnStop.Location = new System.Drawing.Point(309, 5);
+            this.BtnStop.Location = new System.Drawing.Point(416, 4);
+            this.BtnStop.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.BtnStop.Name = "BtnStop";
-            this.BtnStop.Size = new System.Drawing.Size(158, 301);
+            this.BtnStop.Size = new System.Drawing.Size(211, 370);
             this.BtnStop.TabIndex = 10;
             this.BtnStop.Text = "Abandon office";
             this.Tltp_Btns.SetToolTip(this.BtnStop, "Stops building the wall.");
@@ -120,19 +128,23 @@
             // 
             // TxtBoxPass
             // 
-            this.TxtBoxPass.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.TxtBoxPass.Location = new System.Drawing.Point(281, 266);
+            this.TxtBoxPass.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.TxtBoxPass.Location = new System.Drawing.Point(388, 406);
+            this.TxtBoxPass.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.TxtBoxPass.Name = "TxtBoxPass";
-            this.TxtBoxPass.Size = new System.Drawing.Size(176, 20);
+            this.TxtBoxPass.Size = new System.Drawing.Size(233, 22);
             this.TxtBoxPass.TabIndex = 7;
             // 
             // LblNewPass
             // 
-            this.LblNewPass.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.LblNewPass.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.LblNewPass.AutoSize = true;
-            this.LblNewPass.Location = new System.Drawing.Point(278, 250);
+            this.LblNewPass.Location = new System.Drawing.Point(385, 385);
+            this.LblNewPass.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.LblNewPass.Name = "LblNewPass";
-            this.LblNewPass.Size = new System.Drawing.Size(154, 13);
+            this.LblNewPass.Size = new System.Drawing.Size(207, 17);
             this.LblNewPass.TabIndex = 8;
             this.LblNewPass.Text = "New Password (for other users)";
             // 
@@ -141,18 +153,21 @@
             this.LblAuthUser.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.LblAuthUser.AutoSize = true;
-            this.LblAuthUser.Location = new System.Drawing.Point(278, 11);
+            this.LblAuthUser.Location = new System.Drawing.Point(385, 11);
+            this.LblAuthUser.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.LblAuthUser.Name = "LblAuthUser";
-            this.LblAuthUser.Size = new System.Drawing.Size(180, 13);
+            this.LblAuthUser.Size = new System.Drawing.Size(242, 17);
             this.LblAuthUser.TabIndex = 9;
             this.LblAuthUser.Text = "Authorized Users (list from README)";
             // 
             // ProgressBar
             // 
-            this.ProgressBar.Location = new System.Drawing.Point(41, 339);
-            this.ProgressBar.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.ProgressBar.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.ProgressBar.Location = new System.Drawing.Point(55, 382);
+            this.ProgressBar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.ProgressBar.Name = "ProgressBar";
-            this.ProgressBar.Size = new System.Drawing.Size(426, 19);
+            this.ProgressBar.Size = new System.Drawing.Size(572, 23);
             this.ProgressBar.TabIndex = 11;
             // 
             // tabControl1
@@ -162,10 +177,11 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.tabControl1.Controls.Add(this.TabPgConfig);
             this.tabControl1.Controls.Add(this.tabPage2);
-            this.tabControl1.Location = new System.Drawing.Point(10, 11);
+            this.tabControl1.Location = new System.Drawing.Point(13, 14);
+            this.tabControl1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(482, 462);
+            this.tabControl1.Size = new System.Drawing.Size(643, 647);
             this.tabControl1.TabIndex = 12;
             // 
             // TabPgConfig
@@ -175,10 +191,11 @@
             this.TabPgConfig.Controls.Add(this.BtnStop);
             this.TabPgConfig.Controls.Add(this.TxtBoxInfo);
             this.TabPgConfig.Controls.Add(this.LblInfo);
-            this.TabPgConfig.Location = new System.Drawing.Point(4, 22);
+            this.TabPgConfig.Location = new System.Drawing.Point(4, 25);
+            this.TabPgConfig.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.TabPgConfig.Name = "TabPgConfig";
-            this.TabPgConfig.Padding = new System.Windows.Forms.Padding(3);
-            this.TabPgConfig.Size = new System.Drawing.Size(474, 436);
+            this.TabPgConfig.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.TabPgConfig.Size = new System.Drawing.Size(635, 618);
             this.TabPgConfig.TabIndex = 0;
             this.TabPgConfig.Text = "Main";
             this.TabPgConfig.UseVisualStyleBackColor = true;
@@ -192,23 +209,26 @@
             this.tabPage2.Controls.Add(this.TxtBoxUsers);
             this.tabPage2.Controls.Add(this.LblNewPass);
             this.tabPage2.Controls.Add(this.TxtBoxPass);
-            this.tabPage2.Location = new System.Drawing.Point(4, 22);
+            this.tabPage2.Location = new System.Drawing.Point(4, 25);
+            this.tabPage2.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(474, 436);
+            this.tabPage2.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tabPage2.Size = new System.Drawing.Size(635, 618);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "Config";
             this.tabPage2.UseVisualStyleBackColor = true;
             // 
-            // ChkDebug
+            // LblProgramList
             // 
-            this.ChkDebug.AutoSize = true;
-            this.ChkDebug.Location = new System.Drawing.Point(6, 6);
-            this.ChkDebug.Name = "ChkDebug";
-            this.ChkDebug.Size = new System.Drawing.Size(114, 17);
-            this.ChkDebug.TabIndex = 10;
-            this.ChkDebug.Text = "Enable Debugging";
-            this.ChkDebug.UseVisualStyleBackColor = true;
+            this.LblProgramList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.LblProgramList.AutoSize = true;
+            this.LblProgramList.Location = new System.Drawing.Point(385, 457);
+            this.LblProgramList.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.LblProgramList.Name = "LblProgramList";
+            this.LblProgramList.Size = new System.Drawing.Size(183, 17);
+            this.LblProgramList.TabIndex = 12;
+            this.LblProgramList.Text = "Check programs to uninstall";
             // 
             // ChkLstBxPrograms
             // 
@@ -216,29 +236,31 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.ChkLstBxPrograms.FormattingEnabled = true;
             this.ChkLstBxPrograms.HorizontalScrollbar = true;
-            this.ChkLstBxPrograms.Location = new System.Drawing.Point(282, 314);
+            this.ChkLstBxPrograms.Location = new System.Drawing.Point(388, 478);
+            this.ChkLstBxPrograms.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.ChkLstBxPrograms.Name = "ChkLstBxPrograms";
-            this.ChkLstBxPrograms.Size = new System.Drawing.Size(176, 109);
+            this.ChkLstBxPrograms.Size = new System.Drawing.Size(233, 123);
             this.ChkLstBxPrograms.TabIndex = 11;
             // 
-            // LblProgramList
+            // ChkDebug
             // 
-            this.LblProgramList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.LblProgramList.AutoSize = true;
-            this.LblProgramList.Location = new System.Drawing.Point(279, 298);
-            this.LblProgramList.Name = "LblProgramList";
-            this.LblProgramList.Size = new System.Drawing.Size(137, 13);
-            this.LblProgramList.TabIndex = 12;
-            this.LblProgramList.Text = "Check programs to uninstall";
+            this.ChkDebug.AutoSize = true;
+            this.ChkDebug.Location = new System.Drawing.Point(8, 7);
+            this.ChkDebug.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.ChkDebug.Name = "ChkDebug";
+            this.ChkDebug.Size = new System.Drawing.Size(147, 21);
+            this.ChkDebug.TabIndex = 10;
+            this.ChkDebug.Text = "Enable Debugging";
+            this.ChkDebug.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(504, 485);
+            this.ClientSize = new System.Drawing.Size(672, 675);
             this.Controls.Add(this.tabControl1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.Name = "MainForm";
             this.Text = "Trump\'s Cyber Security Firewall TM";
             this.Load += new System.EventHandler(this.MainForm_Load);
