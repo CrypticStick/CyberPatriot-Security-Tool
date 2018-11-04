@@ -1,11 +1,13 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Security;
+using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,7 +18,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 {
     public partial class MainForm : Form
     {
-        bool stop = false;
+        public bool stop = false;
 
         public MainForm()
         {
@@ -105,6 +107,8 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             {
                 this.func = func;
                 form = (MainForm)(func.Target);
+                if (form.stop) return;
+
                 this.message = message;
                 this.args = args;
                 logLine = form.Log(message + "...", false);
@@ -120,6 +124,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         percent = this.percent.Number;
                         Progress(percent);
                     }
+                    if (form.stop) break;
                 }
                 int code = func.EndInvoke(result);
                 if (form.stop) Cancelled();
@@ -183,13 +188,15 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         private int Log(string message, bool debug)
         {
             if (!ChkDebug.Checked && debug) return -1;
-            TxtBoxInfo.AppendText(message + Environment.NewLine);
+            TxtBoxInfo.AppendText(Environment.NewLine);
+            TxtBoxInfo.AppendText(message);
 
             TxtBoxInfo.Focus();
             TxtBoxInfo.SelectionStart = TxtBoxInfo.TextLength;
             TxtBoxInfo.ScrollToCaret();
+            TxtBoxInfo.Update();
 
-            return TxtBoxInfo.Text.Split('\n').Length - 2;
+            return TxtBoxInfo.Text.Split(new string[] { Environment.NewLine }, StringSplitOptions.None).Length - 1;
         }
 
         /// <summary>
@@ -199,26 +206,30 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         {
             if (!ChkDebug.Checked && debug) return;
 
-            string[] lines = TxtBoxInfo.Text.Split('\n');
+            string[] lines = TxtBoxInfo.Text.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
 
             StringBuilder builder = new StringBuilder();
             for (int i = 0; i < lines.Length; i++)
             {
                 if (i == line)
                 {
-                    builder.Append(message + Environment.NewLine);
+                    builder.Append(Environment.NewLine);
+                    builder.Append(message);
                 }
                 else
                 {
+                    if (i != 0)
+                        builder.Append(Environment.NewLine);
                     builder.Append(lines[i]);
-                    builder.Append('\n');
                 }
             }
+
             TxtBoxInfo.Text = builder.ToString();
 
             TxtBoxInfo.Focus();
             TxtBoxInfo.SelectionStart = TxtBoxInfo.TextLength;
             TxtBoxInfo.ScrollToCaret();
+            TxtBoxInfo.Update();
         }
 
         /// <summary>
@@ -228,10 +239,21 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         /// <param name="waitForExit">Whether the thread will lock until process completes.</param>
         private int CMD(string command, bool waitForExit)
         {
-            Log("Running: " + command, true);
             Process cmdTask = new Process();
             cmdTask.StartInfo.FileName = "CMD.exe";
-            cmdTask.StartInfo.Arguments = "/C " + command;
+
+            if (command.Contains(".exe"))
+            {
+                Log("Running: " + "start /wait \"\" " + command, true);
+                cmdTask.StartInfo.Arguments = "/C " + "start /wait \"\" " + command;
+            }
+            else
+            {
+                Log("Running: " + command, true);
+                cmdTask.StartInfo.Arguments = "/C " + command;
+            }
+
+
             cmdTask.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             cmdTask.Start();
             if (waitForExit)
@@ -479,14 +501,13 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             return 0;
         }
 
-
-
         private int ConfigurePolicy(PortableNumber p, params object[] args)
         {
             if (stop) return 1;
             try
             {
                 CMD("wmic UserAccount set PasswordExpires=True", false);
+                CMD("NetSh Advfirewall set allprofiles state on", false);
 
                 CMD("net accounts /minpwlen:10", false);
                 CMD("net accounts /maxpwage:30", false);
@@ -500,6 +521,24 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     if (key != null)
                         key.SetValue("EnableLUA", 1);
                 }
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SYSTEM\CurrentControlSet\Control\Terminal Server",
+                true))
+                {
+                    if (key != null)
+                        key.SetValue("fDenyTSConnections", (ChkRDP.Checked) ? 0 : 1);
+                }
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SYSTEM\CurrentControlSet\Control\Remote Assistance",
+                true))
+                {
+                    if (key != null)
+                        key.SetValue("fAllowToGetHelp", (ChkRDP.Checked) ? 0 : 1);
+                    CMD($"netsh advfirewall firewall set rule group = \"Remote Assistance\" new enable=" + ((ChkRDP.Checked) ? "yes" : "no"), false);
+                }
+
             }
             catch (Exception ex)
             {
@@ -522,14 +561,22 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
+        /// <summary>
+        /// Downloads file from specified url to windows Temp folder.
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="args">1: url || 2: name</param>
+        /// <returns></returns>
         private int DownloadProgram(PortableNumber p, params object[] args)
         {
             try
             {
                 using (var client = new mWebClient(p))
                 {
+                    string uri = (string)args[0];
+                    string name = (string)args[1];
                     Task.Delay(3000);
-                    client.DownloadFileAsync(new Uri((string)args[0]), $"C:\\Windows\\Temp\\{(string)args[1]}_setup.exe");
+                    client.DownloadFileAsync(new Uri(uri), $"C:\\Windows\\Temp\\{name}_setup.exe");
                     client.DownloadProgressChanged += (s, e) =>
                     {
                         client.SetNumber(e.ProgressPercentage);
@@ -551,6 +598,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             return 0;
         }
+
         private int UninstallProgram(PortableNumber p, params object[] args)
         {
             try
@@ -570,17 +618,24 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 return 4;
             }
         }
+
+        /// <summary>
+        /// Installs specified program name from windows Temp folder.
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="args">1: name || 2: arg</param>
+        /// <returns></returns>
         private int InstallProgram(PortableNumber p, params object[] args)
         {
-            if (File.Exists($"C:\\Windows\\Temp\\{args[0]}_setup.exe"))
+            string name = (string)args[0];
+            string arg = (string)args[1];
+
+            if (File.Exists($"C:\\Windows\\Temp\\{name}_setup.exe"))
                 try
                 {
-                    string name = (string)args[0];
-                    string arg = (string)args[1];
                     int exitCode = CMD($"C:\\Windows\\Temp\\{name}_setup.exe {arg}", true);
-
-                    if (exitCode < 0) return 2;
                     File.Delete($"C:\\Windows\\Temp\\{name}_setup.exe");
+                    if (exitCode != 0) return 2;
                 }
                 catch (Exception ex)
                 {
@@ -589,6 +644,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 }
             else
             {
+                Log($"File \"C:\\Windows\\Temp\\{ name}_setup.exe\" does not exist!", true);
                 return 4;
             }
             return 0;
@@ -657,13 +713,17 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             {
                 if (key != null)
                 {
+                    IEnumerator enumToUninstall = ChkLstBxPrograms.CheckedItems.GetEnumerator();
+                    List<string> listToUninstall = new List<string>();
+                    while (enumToUninstall.MoveNext())
+                        listToUninstall.Add((string)enumToUninstall.Current);
 
                     foreach (string program in key.GetSubKeyNames())
                     {
                         try
                         {
                             string programName = Convert.ToString(key.OpenSubKey(program).GetValue("DisplayName"));
-                            if (ChkLstBxPrograms.CheckedItems.Contains(programName))
+                            if (listToUninstall.Contains(programName))
                             {
                                 string programStringQuiet = Convert.ToString(key.OpenSubKey(program).GetValue("QuietUninstallString"));
                                 string programString = Convert.ToString(key.OpenSubKey(program).GetValue("UninstallString"));
@@ -690,23 +750,76 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
+        private void GetAllFoldersUnder(string path, ref List<string> dirs)
+        {
+            try
+            {
+                if ((File.GetAttributes(path) & FileAttributes.ReparsePoint)
+                    != FileAttributes.ReparsePoint)
+                {
+                    foreach (string folder in Directory.GetDirectories(path))
+                    {
+                        dirs.Add(folder);
+                        GetAllFoldersUnder(folder, ref dirs);
+                    }
+                }
+            }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        private int RemoveUnauthorizedFiles(PortableNumber p, params object[] args)
+        {
+            try
+            {
+                string[] prohibitedFileTypes = new string[] { "mp3", "mp4", "wav" };
+                List<string> dirs = new List<string>();
+                GetAllFoldersUnder(@"C:\Users", ref dirs);
+                List<string> badFiles = new List<string>();
+
+                foreach (string dir in dirs)
+                    foreach (string extention in prohibitedFileTypes)
+                        try
+                        {
+                            foreach (string file in Directory.GetFiles(dir, $"*.{extention}", SearchOption.TopDirectoryOnly))
+                                try { badFiles.Add(file); }
+                                catch (UnauthorizedAccessException ex) { }
+                        }
+                        catch (Exception ex) { }
+
+                foreach (string badFile in badFiles)
+                {
+                    File.Move(badFile,
+                        badFile.Insert(badFile.LastIndexOf('.'), " (Deleted)"));
+                    Log($"'Deleted' {badFile}", true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex.Message, true);
+                return 2;
+            }
+            return 0;
+        }
+
         public class Search_OnCompleted : ISearchCompletedCallback
         {
             MainForm form;
-            public Search_OnCompleted(MainForm mainForm)
+            int searchLine;
+            public Search_OnCompleted(MainForm mainForm, int searchLine)
             {
-                this.form = mainForm;
+                form = mainForm;
+                this.searchLine = searchLine;
             }
             public void Invoke(ISearchJob downloadJob, ISearchCompletedCallbackArgs e)
             {
                 if (form.stop)
                 {
-                    form.EditLog(form.searchLine, $"Checking for Windows Updates... CANCELLED", false);
+                    form.EditLog(searchLine, $"Checking for Windows Updates... CANCELLED", false);
                 }
                 else
                 {
                     form.searched = true;
-                    form.EditLog(form.searchLine, $"Checking for Windows Updates... DONE",
+                    form.EditLog(searchLine, $"Checking for Windows Updates... DONE",
                         false);
                 }
             }
@@ -715,33 +828,37 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         public class Download_OnProgressChanged : IDownloadProgressChangedCallback
         {
             MainForm form;
-            public Download_OnProgressChanged(MainForm mainForm)
+            int downloadLine;
+            public Download_OnProgressChanged(MainForm mainForm, int downloadLine)
             {
-                this.form = mainForm;
+                form = mainForm;
+                this.downloadLine = downloadLine;
             }
             public void Invoke(IDownloadJob downloadJob, IDownloadProgressChangedCallbackArgs e)
             {
-                form.EditLog(form.downloadLine, $"Downloading Windows Updates... {LogTask.LoadingBar(e.Progress.PercentComplete)}", false);
+                form.EditLog(downloadLine, $"Downloading Windows Updates... {LogTask.LoadingBar(e.Progress.PercentComplete)}", false);
             }
         }
 
         public class Download_OnCompleted : IDownloadCompletedCallback
         {
             MainForm form;
-            public Download_OnCompleted(MainForm mainForm)
+            int downloadLine;
+            public Download_OnCompleted(MainForm mainForm, int downloadLine)
             {
-                this.form = mainForm;
+                form = mainForm;
+                this.downloadLine = downloadLine;
             }
             public void Invoke(IDownloadJob downloadJob, IDownloadCompletedCallbackArgs e)
             {
                 if (form.stop)
                 {
-                    form.EditLog(form.downloadLine, $"Downloading Windows Updates... CANCELLED", false);
+                    form.EditLog(downloadLine, $"Downloading Windows Updates... CANCELLED", false);
                 }
                 else
                 {
                     form.downloaded = true;
-                    form.EditLog(form.downloadLine, $"Downloading Windows Updates... 100% [========DONE========]",
+                    form.EditLog(downloadLine, $"Downloading Windows Updates... 100% [========DONE========]",
                         false);
                 }
             }
@@ -750,57 +867,64 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         public class Install_OnProgressChanged : IInstallationProgressChangedCallback
         {
             MainForm form;
-            public Install_OnProgressChanged(MainForm mainForm)
+            int installLine;
+            public Install_OnProgressChanged(MainForm mainForm, int installLine)
             {
-                this.form = mainForm;
+                form = mainForm;
+                this.installLine = installLine;
             }
             public void Invoke(IInstallationJob downloadJob, IInstallationProgressChangedCallbackArgs e)
             {
-                form.EditLog(form.installLine, $"Installing Windows Updates... {LogTask.LoadingBar(e.Progress.PercentComplete)}", false);
+                form.EditLog(installLine, $"Installing Windows Updates... {LogTask.LoadingBar(e.Progress.PercentComplete)}", false);
             }
         }
 
         public class Install_OnCompleted : IInstallationCompletedCallback
         {
             MainForm form;
-            public Install_OnCompleted(MainForm mainForm)
+            int installLine;
+            public Install_OnCompleted(MainForm mainForm, int installLine)
             {
-                this.form = mainForm;
+                form = mainForm;
+                this.installLine = installLine;
             }
             public void Invoke(IInstallationJob downloadJob, IInstallationCompletedCallbackArgs e)
             {
                 if (form.stop)
                 {
-                    form.EditLog(form.installLine, $"Installing Windows Updates... CANCELLED", false);
+                    form.EditLog(installLine, $"Installing Windows Updates... CANCELLED", false);
                 }
                 else
                 {
                     form.installed = true;
-                    form.EditLog(form.installLine, $"Installing Windows Updates... 100% [========DONE========]",
+                    form.EditLog(installLine, $"Installing Windows Updates... 100% [========DONE========]",
                         false);
                 }
             }
         }
 
-        private bool searched;
-        private bool downloaded;
-        private bool installed;
-        private int searchLine;
-        private int downloadLine;
-        private int installLine;
+        bool searched;
+        bool downloaded;
+        bool installed;
+
         private void UpdateWindows()
         {
             if (stop) return;
 
+            int searchLine;
+            int downloadLine;
+            int installLine;
+
             searched = false;
             downloaded = false;
             installed = false;
+
             searchLine = Log("Checking for Windows Updates...", false);
             UpdateSession updateSession = new UpdateSession();
 
             IUpdateSearcher updateSearcher = updateSession.CreateUpdateSearcher();
             updateSearcher.Online = true;
-            ISearchJob searchJob = updateSearcher.BeginSearch("IsInstalled=0 AND BrowseOnly=0 AND IsHidden=0", new Search_OnCompleted(this), null);
+            ISearchJob searchJob = updateSearcher.BeginSearch("IsInstalled=0 AND BrowseOnly=0 AND IsHidden=0", new Search_OnCompleted(this, searchLine), null);
             while (!searched)
             {
                 if (stop)
@@ -823,7 +947,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 downloadLine = Log("Downloading Windows Updates...", false);
                 UpdateDownloader downloader = updateSession.CreateUpdateDownloader();
                 downloader.Updates = searchResult.Updates;
-                IDownloadJob downloadJob = downloader.BeginDownload(new Download_OnProgressChanged(this), new Download_OnCompleted(this), null);
+                IDownloadJob downloadJob = downloader.BeginDownload(new Download_OnProgressChanged(this, downloadLine), new Download_OnCompleted(this, downloadLine), null);
                 while (!downloaded)
                 {
                     if (stop)
@@ -859,7 +983,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 installLine = Log("Installing Windows Updates...", false);
                 IUpdateInstaller installer = updateSession.CreateUpdateInstaller();
                 installer.Updates = updatesToInstall;
-                IInstallationJob installationJob = installer.BeginInstall(new Install_OnProgressChanged(this), new Install_OnCompleted(this), null);
+                IInstallationJob installationJob = installer.BeginInstall(new Install_OnProgressChanged(this, installLine), new Install_OnCompleted(this, installLine), null);
                 while (!installed)
                 {
                     if (stop)
@@ -877,24 +1001,18 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
         private void ListOfTasks(object sender, DoWorkEventArgs e)
         {
-            ProgressBar.Maximum = 7;
+            ProgressBar.Maximum = 8;
             ProgressBar.Step = 1;
             ProgressBar.Value = 0;
 
-            new LogTask("Enabling auditing", EnableAuditing);
-            ++ProgressBar.Value;
-            new LogTask("Configuring users", ConfigureUsers);
-            ++ProgressBar.Value;
-            new LogTask("Configuring policy", ConfigurePolicy);
-            ++ProgressBar.Value;
-            new LogTask("Setting up MalwareBytes", UpdateMalwareBytes);
-            ++ProgressBar.Value;
-            new LogTask("Setting up Firefox", UpdateFirefox);
-            ++ProgressBar.Value;
-            new LogTask("Uninstalling programs", UninstallPrograms);
-            ++ProgressBar.Value;
-            UpdateWindows();
-            ++ProgressBar.Value;
+            new LogTask("Enabling auditing", EnableAuditing); ++ProgressBar.Value;
+            new LogTask("Configuring users", ConfigureUsers); ++ProgressBar.Value;
+            new LogTask("Configuring policy", ConfigurePolicy); ++ProgressBar.Value;
+            new LogTask("Removing unauthorized files", RemoveUnauthorizedFiles); ++ProgressBar.Value;
+            new LogTask("Setting up MalwareBytes", UpdateMalwareBytes); ++ProgressBar.Value;
+            new LogTask("Setting up Firefox", UpdateFirefox); ++ProgressBar.Value;
+            new LogTask("Uninstalling programs", UninstallPrograms); ++ProgressBar.Value;
+            UpdateWindows(); ++ProgressBar.Value;
         }
 
         BackgroundWorker tasks;
@@ -920,15 +1038,12 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             UpdateProgramList();
 
             if (stop)
-            {
-                Log("The wall was not built ;(", false);
-                Log("----------------------------------------------------", false);
-            }
+                Log(@"The wall was somewhat finished ¯\_(ツ)_/¯", false);
             else
-            {
                 Log("The wall has been built!", false);
-                Log("----------------------------------------------------", false);
-            }
+
+            Log("Note: 9/10 doctors agree the computer must be restarted!", false);
+            Log("----------------------------------------------------", false);
 
             ProgressBar.Value = 0;
             stop = false;
@@ -943,16 +1058,54 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             BtnStop.Enabled = false;
         }
 
+        private void BtnBrowseFile_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (!Directory.Exists(@"C:\Windows\system32\config\systemprofile\Desktop"))
+                    Directory.CreateDirectory(@"C:\Windows\system32\config\systemprofile\Desktop");
+            }
+            catch (Exception ex) { }
+
+            if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                TxtBoxBrowseFile.Text = openFileDialog.FileName;
+            }
+        }
+
+        private void TxtBoxBrowseFile_TextChanged(object sender, EventArgs e)
+        {
+            string pathToFile = TxtBoxBrowseFile.Text;
+            if (File.Exists(pathToFile))
+            {
+                string md5Hash = "N/A";
+                try
+                {
+                    using (var md5 = MD5.Create())
+                    {
+                        using (var stream = File.OpenRead(pathToFile))
+                        {
+                            var hash = md5.ComputeHash(stream);
+                            md5Hash = BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+                        }
+                    }
+
+                    FileInfo Fi = new FileInfo(pathToFile);
+
+                    TxtBoxFileInfo.Text =
+                    "File Name: " + Path.GetFileName(pathToFile) + Environment.NewLine +
+                    "Owner: " + Fi.GetAccessControl().GetOwner(typeof(NTAccount)).ToString() + Environment.NewLine +
+                    "Group: " + Fi.GetAccessControl().GetGroup(typeof(NTAccount)).ToString() + Environment.NewLine +
+                    "MD5 Hash: " + md5Hash;
+
+                }
+                catch (Exception ex) { }
+            }
+        }
+
         //TODO:
         /*
-         * 'Build the Wall!' should be able to configure windows security settings 
-         * (UAC, Firewall (Account Policies), etc.)
-         * Add easy way to turn on and off all FTP / 
-         * Remote conection services / windows feature)
-         *  Update firefox and Windows (DEFER FEATURE UPDATES)
-         * Tool to get info about file (Owner, MD5, Group, EVERYTHING)
-         * Automatically give every user a password
-         * Remove (AKA rename prohibited files (.mp3, any personal files from users lol)
+         * Add new list of features to add after competition!!
          */
     }
 }

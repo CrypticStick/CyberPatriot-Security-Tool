@@ -16,8 +16,8 @@
             Remove this element if your application requires this virtualization for backwards
             compatibility.
         -->
-        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
-        <!-- requireAdministrator later probably -->
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <!-- asInvoker just in case -->
       </requestedPrivileges>
     </security>
   </trustInfo>
