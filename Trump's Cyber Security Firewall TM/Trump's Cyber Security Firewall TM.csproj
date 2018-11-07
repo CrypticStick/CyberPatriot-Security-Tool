@@ -123,7 +123,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\PsExec64.exe" />
+    <None Include="Resources\PsExec.exe" />
     <Content Include="TrumpsCyberSecurityFirewallTM.ico" />
   </ItemGroup>
   <ItemGroup>

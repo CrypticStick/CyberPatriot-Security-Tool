@@ -63,9 +63,9 @@ namespace Trump_s_Cyber_Security_Firewall_TM.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        public static byte[] PsExec64 {
+        public static byte[] PsExec {
             get {
-                object obj = ResourceManager.GetObject("PsExec64", resourceCulture);
+                object obj = ResourceManager.GetObject("PsExec", resourceCulture);
                 return ((byte[])(obj));
             }
         }

