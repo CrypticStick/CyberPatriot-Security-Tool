@@ -4,6 +4,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.DirectoryServices;
+using System.DirectoryServices.AccountManagement;
 using System.IO;
 using System.Net;
 using System.Security;
@@ -74,7 +76,9 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             {
                 ElevateUser();
             }
+
             UpdateProgramList();
+            UpdateGroupList();
         }
 
         public delegate int mTask(PortableNumber p, params object[] args);
@@ -167,19 +171,36 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             {
                 if (key != null)
                 {
-                    ChkLstBxPrograms.Items.Clear();
+                    ChkLstBoxPrograms.Items.Clear();
                     foreach (string program in key.GetSubKeyNames())
                     {
                         string potentialString = Convert.ToString(key.OpenSubKey(program).GetValue("UninstallString"));
                         if (potentialString != null && potentialString != "")
                         {
                             string programName = Convert.ToString(key.OpenSubKey(program).GetValue("DisplayName"));
-                            ChkLstBxPrograms.Items.Add(programName, false);
+                            ChkLstBoxPrograms.Items.Add(programName, false);
                         }
                     }
                 }
             }
-            ChkLstBxPrograms.Update();
+            ChkLstBoxPrograms.Update();
+        }
+
+        private void UpdateGroupList()
+        {
+            try
+            {
+                DirectoryEntry machine = new DirectoryEntry("WinNT://" + Environment.MachineName + ",Computer");
+                foreach (DirectoryEntry child in machine.Children)
+                {
+                    if (child.SchemaClassName == "Group")
+                    {
+                        CmboBoxGroups.Items.Add(child.Name);
+                    }
+                }
+                CmboBoxGroups.Update();
+            }
+            catch (Exception ex) { }
         }
 
         /// <summary>
@@ -453,19 +474,27 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 return 3;
             }
 
-            String[] userNames = null;
+            List<string> usersOnSystem = new List<string>();
             using (var key = AccessRegistryKey(@"SECURITY\SAM\Domains\Account\Users\Names", false))
             {
                 if (key != null)
                 {
                     Log("Reading list of users...", true);
-                    userNames = key.GetSubKeyNames();
+                    usersOnSystem.AddRange(key.GetSubKeyNames());
                 }
             }
 
             String userAdminCmd;
 
-            foreach (String user in userNames)
+            foreach(string user in userList)
+            {
+                if (!usersOnSystem.Contains(user))
+                {
+                    CMD($"net user \"{user}\" \"{TxtBoxPass.Text}\" /add", false);
+                }
+            }
+
+            foreach (string user in usersOnSystem)
             {
                 if (stop) return 1;
                 if (user.Equals("Administrator") || user.Equals("Guest"))
@@ -701,7 +730,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
         private int UninstallPrograms(PortableNumber p, params object[] args)
         {
-            if (ChkLstBxPrograms.CheckedItems.Count < 1)
+            if (ChkLstBoxPrograms.CheckedItems.Count < 1)
             {
                 Log("No programs were selected for uninstallation.", false);
                 return 0;
@@ -713,7 +742,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             {
                 if (key != null)
                 {
-                    IEnumerator enumToUninstall = ChkLstBxPrograms.CheckedItems.GetEnumerator();
+                    IEnumerator enumToUninstall = ChkLstBoxPrograms.CheckedItems.GetEnumerator();
                     List<string> listToUninstall = new List<string>();
                     while (enumToUninstall.MoveNext())
                         listToUninstall.Add((string)enumToUninstall.Current);
@@ -1100,6 +1129,32 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
                 }
                 catch (Exception ex) { }
+            }
+        }
+        private void CmboBoxGroups_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            using (var context = new PrincipalContext(ContextType.Domain))
+            {
+                using (var group = GroupPrincipal.FindByIdentity(context, CmboBoxGroups.SelectedItem.ToString()))
+                {
+                    if (group == null)
+                    {
+                        MessageBox.Show("Group does not exist!",
+                            "Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                            );
+                    }
+                    else
+                    {
+                        var users = group.GetMembers(true);
+                        TxtBoxGroupInfo.Text = "Users: ";
+                        foreach (UserPrincipal user in users)
+                        {
+                            TxtBoxGroupInfo.AppendText(Environment.NewLine + user.Name);
+                        }
+                    }
+                }
             }
         }
 

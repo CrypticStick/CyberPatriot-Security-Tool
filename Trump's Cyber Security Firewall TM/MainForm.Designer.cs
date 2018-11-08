@@ -41,20 +41,25 @@
             this.LblAuthUser = new System.Windows.Forms.Label();
             this.ProgressBar = new System.Windows.Forms.ProgressBar();
             this.tabControl1 = new System.Windows.Forms.TabControl();
+            this.TabPgMain = new System.Windows.Forms.TabPage();
             this.TabPgConfig = new System.Windows.Forms.TabPage();
-            this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.ChkRDP = new System.Windows.Forms.CheckBox();
+            this.LblProgramList = new System.Windows.Forms.Label();
+            this.ChkLstBoxPrograms = new System.Windows.Forms.CheckedListBox();
+            this.ChkDebug = new System.Windows.Forms.CheckBox();
+            this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
+            this.TabPgTools = new System.Windows.Forms.TabPage();
             this.TxtBoxFileInfo = new System.Windows.Forms.TextBox();
             this.LblBrowseFile = new System.Windows.Forms.Label();
             this.TxtBoxBrowseFile = new System.Windows.Forms.TextBox();
             this.BtnBrowseFile = new System.Windows.Forms.Button();
-            this.ChkRDP = new System.Windows.Forms.CheckBox();
-            this.LblProgramList = new System.Windows.Forms.Label();
-            this.ChkLstBxPrograms = new System.Windows.Forms.CheckedListBox();
-            this.ChkDebug = new System.Windows.Forms.CheckBox();
-            this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
+            this.label1 = new System.Windows.Forms.Label();
+            this.TxtBoxGroupInfo = new System.Windows.Forms.TextBox();
+            this.CmboBoxGroups = new System.Windows.Forms.ComboBox();
             this.tabControl1.SuspendLayout();
+            this.TabPgMain.SuspendLayout();
             this.TabPgConfig.SuspendLayout();
-            this.tabPage2.SuspendLayout();
+            this.TabPgTools.SuspendLayout();
             this.SuspendLayout();
             // 
             // TxtBoxInfo
@@ -63,13 +68,12 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.TxtBoxInfo.Font = new System.Drawing.Font("Consolas", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.TxtBoxInfo.Location = new System.Drawing.Point(8, 412);
-            this.TxtBoxInfo.Margin = new System.Windows.Forms.Padding(4);
+            this.TxtBoxInfo.Location = new System.Drawing.Point(6, 335);
             this.TxtBoxInfo.Multiline = true;
             this.TxtBoxInfo.Name = "TxtBoxInfo";
             this.TxtBoxInfo.ReadOnly = true;
             this.TxtBoxInfo.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.TxtBoxInfo.Size = new System.Drawing.Size(619, 198);
+            this.TxtBoxInfo.Size = new System.Drawing.Size(465, 162);
             this.TxtBoxInfo.TabIndex = 1;
             // 
             // LblInfo
@@ -78,10 +82,9 @@
             | System.Windows.Forms.AnchorStyles.Left)));
             this.LblInfo.AutoSize = true;
             this.LblInfo.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.LblInfo.Location = new System.Drawing.Point(8, 382);
-            this.LblInfo.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.LblInfo.Location = new System.Drawing.Point(6, 310);
             this.LblInfo.Name = "LblInfo";
-            this.LblInfo.Size = new System.Drawing.Size(36, 18);
+            this.LblInfo.Size = new System.Drawing.Size(30, 15);
             this.LblInfo.TabIndex = 2;
             this.LblInfo.Text = "Info:";
             // 
@@ -90,12 +93,11 @@
             this.TxtBoxUsers.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.TxtBoxUsers.Location = new System.Drawing.Point(331, 28);
-            this.TxtBoxUsers.Margin = new System.Windows.Forms.Padding(4);
+            this.TxtBoxUsers.Location = new System.Drawing.Point(248, 23);
             this.TxtBoxUsers.Multiline = true;
             this.TxtBoxUsers.Name = "TxtBoxUsers";
             this.TxtBoxUsers.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.TxtBoxUsers.Size = new System.Drawing.Size(290, 272);
+            this.TxtBoxUsers.Size = new System.Drawing.Size(218, 222);
             this.TxtBoxUsers.TabIndex = 4;
             // 
             // BtnSecure
@@ -105,10 +107,9 @@
             this.BtnSecure.Enabled = false;
             this.BtnSecure.Font = new System.Drawing.Font("Comic Sans MS", 24F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.BtnSecure.ForeColor = System.Drawing.Color.Red;
-            this.BtnSecure.Location = new System.Drawing.Point(8, 4);
-            this.BtnSecure.Margin = new System.Windows.Forms.Padding(4);
+            this.BtnSecure.Location = new System.Drawing.Point(6, 3);
             this.BtnSecure.Name = "BtnSecure";
-            this.BtnSecure.Size = new System.Drawing.Size(400, 369);
+            this.BtnSecure.Size = new System.Drawing.Size(300, 300);
             this.BtnSecure.TabIndex = 5;
             this.BtnSecure.Text = "Build the wall!";
             this.Tltp_Btns.SetToolTip(this.BtnSecure, "Configures system for optimal security.\r\nAlso installs anti-malaware and enables " +
@@ -122,10 +123,9 @@
             this.BtnStop.Enabled = false;
             this.BtnStop.Font = new System.Drawing.Font("Comic Sans MS", 24F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.BtnStop.ForeColor = System.Drawing.Color.Red;
-            this.BtnStop.Location = new System.Drawing.Point(416, 4);
-            this.BtnStop.Margin = new System.Windows.Forms.Padding(4);
+            this.BtnStop.Location = new System.Drawing.Point(312, 3);
             this.BtnStop.Name = "BtnStop";
-            this.BtnStop.Size = new System.Drawing.Size(211, 370);
+            this.BtnStop.Size = new System.Drawing.Size(158, 301);
             this.BtnStop.TabIndex = 10;
             this.BtnStop.Text = "Abandon office";
             this.Tltp_Btns.SetToolTip(this.BtnStop, "Stops building the wall.");
@@ -136,10 +136,9 @@
             // 
             this.TxtBoxPass.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.TxtBoxPass.Location = new System.Drawing.Point(331, 351);
-            this.TxtBoxPass.Margin = new System.Windows.Forms.Padding(4);
+            this.TxtBoxPass.Location = new System.Drawing.Point(248, 285);
             this.TxtBoxPass.Name = "TxtBoxPass";
-            this.TxtBoxPass.Size = new System.Drawing.Size(290, 22);
+            this.TxtBoxPass.Size = new System.Drawing.Size(218, 20);
             this.TxtBoxPass.TabIndex = 7;
             // 
             // LblNewPass
@@ -147,10 +146,9 @@
             this.LblNewPass.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.LblNewPass.AutoSize = true;
-            this.LblNewPass.Location = new System.Drawing.Point(328, 330);
-            this.LblNewPass.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.LblNewPass.Location = new System.Drawing.Point(246, 268);
             this.LblNewPass.Name = "LblNewPass";
-            this.LblNewPass.Size = new System.Drawing.Size(207, 17);
+            this.LblNewPass.Size = new System.Drawing.Size(154, 13);
             this.LblNewPass.TabIndex = 8;
             this.LblNewPass.Text = "New Password (for other users)";
             // 
@@ -159,10 +157,9 @@
             this.LblAuthUser.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.LblAuthUser.AutoSize = true;
-            this.LblAuthUser.Location = new System.Drawing.Point(328, 7);
-            this.LblAuthUser.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.LblAuthUser.Location = new System.Drawing.Point(246, 6);
             this.LblAuthUser.Name = "LblAuthUser";
-            this.LblAuthUser.Size = new System.Drawing.Size(242, 17);
+            this.LblAuthUser.Size = new System.Drawing.Size(180, 13);
             this.LblAuthUser.TabIndex = 9;
             this.LblAuthUser.Text = "Authorized Users (list from README)";
             // 
@@ -170,10 +167,10 @@
             // 
             this.ProgressBar.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.ProgressBar.Location = new System.Drawing.Point(55, 382);
-            this.ProgressBar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.ProgressBar.Location = new System.Drawing.Point(41, 310);
+            this.ProgressBar.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.ProgressBar.Name = "ProgressBar";
-            this.ProgressBar.Size = new System.Drawing.Size(572, 23);
+            this.ProgressBar.Size = new System.Drawing.Size(429, 19);
             this.ProgressBar.TabIndex = 11;
             // 
             // tabControl1
@@ -181,106 +178,55 @@
             this.tabControl1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.tabControl1.Controls.Add(this.TabPgMain);
             this.tabControl1.Controls.Add(this.TabPgConfig);
-            this.tabControl1.Controls.Add(this.tabPage2);
-            this.tabControl1.Location = new System.Drawing.Point(13, 14);
-            this.tabControl1.Margin = new System.Windows.Forms.Padding(4);
+            this.tabControl1.Controls.Add(this.TabPgTools);
+            this.tabControl1.Location = new System.Drawing.Point(10, 11);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(643, 647);
+            this.tabControl1.Size = new System.Drawing.Size(482, 526);
             this.tabControl1.TabIndex = 12;
+            // 
+            // TabPgMain
+            // 
+            this.TabPgMain.Controls.Add(this.ProgressBar);
+            this.TabPgMain.Controls.Add(this.BtnSecure);
+            this.TabPgMain.Controls.Add(this.BtnStop);
+            this.TabPgMain.Controls.Add(this.TxtBoxInfo);
+            this.TabPgMain.Controls.Add(this.LblInfo);
+            this.TabPgMain.Location = new System.Drawing.Point(4, 22);
+            this.TabPgMain.Name = "TabPgMain";
+            this.TabPgMain.Padding = new System.Windows.Forms.Padding(3, 3, 3, 3);
+            this.TabPgMain.Size = new System.Drawing.Size(474, 500);
+            this.TabPgMain.TabIndex = 0;
+            this.TabPgMain.Text = "Main";
+            this.TabPgMain.UseVisualStyleBackColor = true;
             // 
             // TabPgConfig
             // 
-            this.TabPgConfig.Controls.Add(this.ProgressBar);
-            this.TabPgConfig.Controls.Add(this.BtnSecure);
-            this.TabPgConfig.Controls.Add(this.BtnStop);
-            this.TabPgConfig.Controls.Add(this.TxtBoxInfo);
-            this.TabPgConfig.Controls.Add(this.LblInfo);
-            this.TabPgConfig.Location = new System.Drawing.Point(4, 25);
-            this.TabPgConfig.Margin = new System.Windows.Forms.Padding(4);
+            this.TabPgConfig.Controls.Add(this.ChkRDP);
+            this.TabPgConfig.Controls.Add(this.LblProgramList);
+            this.TabPgConfig.Controls.Add(this.ChkLstBoxPrograms);
+            this.TabPgConfig.Controls.Add(this.ChkDebug);
+            this.TabPgConfig.Controls.Add(this.LblAuthUser);
+            this.TabPgConfig.Controls.Add(this.TxtBoxUsers);
+            this.TabPgConfig.Controls.Add(this.LblNewPass);
+            this.TabPgConfig.Controls.Add(this.TxtBoxPass);
+            this.TabPgConfig.Location = new System.Drawing.Point(4, 22);
             this.TabPgConfig.Name = "TabPgConfig";
-            this.TabPgConfig.Padding = new System.Windows.Forms.Padding(4);
-            this.TabPgConfig.Size = new System.Drawing.Size(635, 618);
-            this.TabPgConfig.TabIndex = 0;
-            this.TabPgConfig.Text = "Main";
+            this.TabPgConfig.Padding = new System.Windows.Forms.Padding(3, 3, 3, 3);
+            this.TabPgConfig.Size = new System.Drawing.Size(474, 500);
+            this.TabPgConfig.TabIndex = 1;
+            this.TabPgConfig.Text = "Config";
             this.TabPgConfig.UseVisualStyleBackColor = true;
-            // 
-            // tabPage2
-            // 
-            this.tabPage2.Controls.Add(this.TxtBoxFileInfo);
-            this.tabPage2.Controls.Add(this.LblBrowseFile);
-            this.tabPage2.Controls.Add(this.TxtBoxBrowseFile);
-            this.tabPage2.Controls.Add(this.BtnBrowseFile);
-            this.tabPage2.Controls.Add(this.ChkRDP);
-            this.tabPage2.Controls.Add(this.LblProgramList);
-            this.tabPage2.Controls.Add(this.ChkLstBxPrograms);
-            this.tabPage2.Controls.Add(this.ChkDebug);
-            this.tabPage2.Controls.Add(this.LblAuthUser);
-            this.tabPage2.Controls.Add(this.TxtBoxUsers);
-            this.tabPage2.Controls.Add(this.LblNewPass);
-            this.tabPage2.Controls.Add(this.TxtBoxPass);
-            this.tabPage2.Location = new System.Drawing.Point(4, 25);
-            this.tabPage2.Margin = new System.Windows.Forms.Padding(4);
-            this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(4);
-            this.tabPage2.Size = new System.Drawing.Size(635, 618);
-            this.tabPage2.TabIndex = 1;
-            this.tabPage2.Text = "Config";
-            this.tabPage2.UseVisualStyleBackColor = true;
-            // 
-            // TxtBoxFileInfo
-            // 
-            this.TxtBoxFileInfo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.TxtBoxFileInfo.Font = new System.Drawing.Font("Consolas", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.TxtBoxFileInfo.Location = new System.Drawing.Point(8, 307);
-            this.TxtBoxFileInfo.Margin = new System.Windows.Forms.Padding(4);
-            this.TxtBoxFileInfo.Multiline = true;
-            this.TxtBoxFileInfo.Name = "TxtBoxFileInfo";
-            this.TxtBoxFileInfo.ReadOnly = true;
-            this.TxtBoxFileInfo.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.TxtBoxFileInfo.Size = new System.Drawing.Size(300, 303);
-            this.TxtBoxFileInfo.TabIndex = 17;
-            this.TxtBoxFileInfo.WordWrap = false;
-            // 
-            // LblBrowseFile
-            // 
-            this.LblBrowseFile.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.LblBrowseFile.AutoSize = true;
-            this.LblBrowseFile.Location = new System.Drawing.Point(5, 258);
-            this.LblBrowseFile.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.LblBrowseFile.Name = "LblBrowseFile";
-            this.LblBrowseFile.Size = new System.Drawing.Size(237, 17);
-            this.LblBrowseFile.TabIndex = 16;
-            this.LblBrowseFile.Text = "Trump\'s Top Secret Email Decryptor";
-            // 
-            // TxtBoxBrowseFile
-            // 
-            this.TxtBoxBrowseFile.AllowDrop = true;
-            this.TxtBoxBrowseFile.Location = new System.Drawing.Point(86, 278);
-            this.TxtBoxBrowseFile.Name = "TxtBoxBrowseFile";
-            this.TxtBoxBrowseFile.Size = new System.Drawing.Size(222, 22);
-            this.TxtBoxBrowseFile.TabIndex = 15;
-            this.TxtBoxBrowseFile.TextChanged += new System.EventHandler(this.TxtBoxBrowseFile_TextChanged);
-            // 
-            // BtnBrowseFile
-            // 
-            this.BtnBrowseFile.Location = new System.Drawing.Point(5, 277);
-            this.BtnBrowseFile.Name = "BtnBrowseFile";
-            this.BtnBrowseFile.Size = new System.Drawing.Size(75, 23);
-            this.BtnBrowseFile.TabIndex = 14;
-            this.BtnBrowseFile.Text = "Browse...";
-            this.BtnBrowseFile.UseVisualStyleBackColor = true;
-            this.BtnBrowseFile.Click += new System.EventHandler(this.BtnBrowseFile_Click);
             // 
             // ChkRDP
             // 
             this.ChkRDP.AutoSize = true;
-            this.ChkRDP.Location = new System.Drawing.Point(8, 32);
+            this.ChkRDP.Location = new System.Drawing.Point(6, 26);
+            this.ChkRDP.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.ChkRDP.Name = "ChkRDP";
-            this.ChkRDP.Size = new System.Drawing.Size(183, 21);
+            this.ChkRDP.Size = new System.Drawing.Size(142, 17);
             this.ChkRDP.TabIndex = 13;
             this.ChkRDP.Text = "Enable Remote Desktop";
             this.ChkRDP.UseVisualStyleBackColor = true;
@@ -290,32 +236,29 @@
             this.LblProgramList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.LblProgramList.AutoSize = true;
-            this.LblProgramList.Location = new System.Drawing.Point(328, 398);
-            this.LblProgramList.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.LblProgramList.Location = new System.Drawing.Point(246, 323);
             this.LblProgramList.Name = "LblProgramList";
-            this.LblProgramList.Size = new System.Drawing.Size(183, 17);
+            this.LblProgramList.Size = new System.Drawing.Size(137, 13);
             this.LblProgramList.TabIndex = 12;
             this.LblProgramList.Text = "Check programs to uninstall";
             // 
-            // ChkLstBxPrograms
+            // ChkLstBoxPrograms
             // 
-            this.ChkLstBxPrograms.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.ChkLstBoxPrograms.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.ChkLstBxPrograms.FormattingEnabled = true;
-            this.ChkLstBxPrograms.HorizontalScrollbar = true;
-            this.ChkLstBxPrograms.Location = new System.Drawing.Point(331, 419);
-            this.ChkLstBxPrograms.Margin = new System.Windows.Forms.Padding(4);
-            this.ChkLstBxPrograms.Name = "ChkLstBxPrograms";
-            this.ChkLstBxPrograms.Size = new System.Drawing.Size(290, 191);
-            this.ChkLstBxPrograms.TabIndex = 11;
+            this.ChkLstBoxPrograms.FormattingEnabled = true;
+            this.ChkLstBoxPrograms.HorizontalScrollbar = true;
+            this.ChkLstBoxPrograms.Location = new System.Drawing.Point(248, 340);
+            this.ChkLstBoxPrograms.Name = "ChkLstBoxPrograms";
+            this.ChkLstBoxPrograms.Size = new System.Drawing.Size(218, 154);
+            this.ChkLstBoxPrograms.TabIndex = 11;
             // 
             // ChkDebug
             // 
             this.ChkDebug.AutoSize = true;
-            this.ChkDebug.Location = new System.Drawing.Point(8, 7);
-            this.ChkDebug.Margin = new System.Windows.Forms.Padding(4);
+            this.ChkDebug.Location = new System.Drawing.Point(6, 6);
             this.ChkDebug.Name = "ChkDebug";
-            this.ChkDebug.Size = new System.Drawing.Size(147, 21);
+            this.ChkDebug.Size = new System.Drawing.Size(114, 17);
             this.ChkDebug.TabIndex = 10;
             this.ChkDebug.Text = "Enable Debugging";
             this.ChkDebug.UseVisualStyleBackColor = true;
@@ -324,22 +267,117 @@
             // 
             this.openFileDialog.InitialDirectory = "C:\\Users";
             // 
+            // TabPgTools
+            // 
+            this.TabPgTools.Controls.Add(this.CmboBoxGroups);
+            this.TabPgTools.Controls.Add(this.TxtBoxGroupInfo);
+            this.TabPgTools.Controls.Add(this.label1);
+            this.TabPgTools.Controls.Add(this.TxtBoxFileInfo);
+            this.TabPgTools.Controls.Add(this.LblBrowseFile);
+            this.TabPgTools.Controls.Add(this.TxtBoxBrowseFile);
+            this.TabPgTools.Controls.Add(this.BtnBrowseFile);
+            this.TabPgTools.Location = new System.Drawing.Point(4, 22);
+            this.TabPgTools.Name = "TabPgTools";
+            this.TabPgTools.Size = new System.Drawing.Size(474, 500);
+            this.TabPgTools.TabIndex = 2;
+            this.TabPgTools.Text = "Tools";
+            this.TabPgTools.UseVisualStyleBackColor = true;
+            // 
+            // TxtBoxFileInfo
+            // 
+            this.TxtBoxFileInfo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.TxtBoxFileInfo.Font = new System.Drawing.Font("Consolas", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.TxtBoxFileInfo.Location = new System.Drawing.Point(3, 42);
+            this.TxtBoxFileInfo.Multiline = true;
+            this.TxtBoxFileInfo.Name = "TxtBoxFileInfo";
+            this.TxtBoxFileInfo.ReadOnly = true;
+            this.TxtBoxFileInfo.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.TxtBoxFileInfo.Size = new System.Drawing.Size(226, 247);
+            this.TxtBoxFileInfo.TabIndex = 21;
+            this.TxtBoxFileInfo.WordWrap = false;
+            // 
+            // LblBrowseFile
+            // 
+            this.LblBrowseFile.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.LblBrowseFile.AutoSize = true;
+            this.LblBrowseFile.Location = new System.Drawing.Point(1, 3);
+            this.LblBrowseFile.Name = "LblBrowseFile";
+            this.LblBrowseFile.Size = new System.Drawing.Size(177, 13);
+            this.LblBrowseFile.TabIndex = 20;
+            this.LblBrowseFile.Text = "Trump\'s Top Secret Email Decryptor";
+            // 
+            // TxtBoxBrowseFile
+            // 
+            this.TxtBoxBrowseFile.AllowDrop = true;
+            this.TxtBoxBrowseFile.Location = new System.Drawing.Point(61, 19);
+            this.TxtBoxBrowseFile.Margin = new System.Windows.Forms.Padding(2);
+            this.TxtBoxBrowseFile.Name = "TxtBoxBrowseFile";
+            this.TxtBoxBrowseFile.Size = new System.Drawing.Size(168, 20);
+            this.TxtBoxBrowseFile.TabIndex = 19;
+            // 
+            // BtnBrowseFile
+            // 
+            this.BtnBrowseFile.Location = new System.Drawing.Point(3, 19);
+            this.BtnBrowseFile.Margin = new System.Windows.Forms.Padding(2);
+            this.BtnBrowseFile.Name = "BtnBrowseFile";
+            this.BtnBrowseFile.Size = new System.Drawing.Size(56, 19);
+            this.BtnBrowseFile.TabIndex = 18;
+            this.BtnBrowseFile.Text = "Browse...";
+            this.BtnBrowseFile.UseVisualStyleBackColor = true;
+            // 
+            // label1
+            // 
+            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(242, 3);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(105, 13);
+            this.label1.TabIndex = 23;
+            this.label1.Text = "CIA Identity Detector";
+            // 
+            // TxtBoxGroupInfo
+            // 
+            this.TxtBoxGroupInfo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.TxtBoxGroupInfo.Font = new System.Drawing.Font("Consolas", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.TxtBoxGroupInfo.Location = new System.Drawing.Point(245, 42);
+            this.TxtBoxGroupInfo.Multiline = true;
+            this.TxtBoxGroupInfo.Name = "TxtBoxGroupInfo";
+            this.TxtBoxGroupInfo.ReadOnly = true;
+            this.TxtBoxGroupInfo.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.TxtBoxGroupInfo.Size = new System.Drawing.Size(226, 247);
+            this.TxtBoxGroupInfo.TabIndex = 24;
+            this.TxtBoxGroupInfo.WordWrap = false;
+            // 
+            // CmboBoxGroups
+            // 
+            this.CmboBoxGroups.FormattingEnabled = true;
+            this.CmboBoxGroups.Location = new System.Drawing.Point(245, 16);
+            this.CmboBoxGroups.Name = "CmboBoxGroups";
+            this.CmboBoxGroups.Size = new System.Drawing.Size(226, 21);
+            this.CmboBoxGroups.TabIndex = 25;
+            this.CmboBoxGroups.SelectedIndexChanged += new System.EventHandler(this.CmboBoxGroups_SelectedIndexChanged);
+            // 
             // MainForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(672, 675);
+            this.ClientSize = new System.Drawing.Size(504, 548);
             this.Controls.Add(this.tabControl1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "MainForm";
             this.Text = "Trump\'s Cyber Security Firewall TM";
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.tabControl1.ResumeLayout(false);
+            this.TabPgMain.ResumeLayout(false);
+            this.TabPgMain.PerformLayout();
             this.TabPgConfig.ResumeLayout(false);
             this.TabPgConfig.PerformLayout();
-            this.tabPage2.ResumeLayout(false);
-            this.tabPage2.PerformLayout();
+            this.TabPgTools.ResumeLayout(false);
+            this.TabPgTools.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -356,17 +394,21 @@
         private System.Windows.Forms.Button BtnStop;
         private System.Windows.Forms.ProgressBar ProgressBar;
         private System.Windows.Forms.TabControl tabControl1;
+        private System.Windows.Forms.TabPage TabPgMain;
         private System.Windows.Forms.TabPage TabPgConfig;
-        private System.Windows.Forms.TabPage tabPage2;
         private System.Windows.Forms.Label LblProgramList;
-        private System.Windows.Forms.CheckedListBox ChkLstBxPrograms;
+        private System.Windows.Forms.CheckedListBox ChkLstBoxPrograms;
         private System.Windows.Forms.CheckBox ChkDebug;
         private System.Windows.Forms.CheckBox ChkRDP;
-        private System.Windows.Forms.TextBox TxtBoxBrowseFile;
-        private System.Windows.Forms.Button BtnBrowseFile;
         private System.Windows.Forms.OpenFileDialog openFileDialog;
+        private System.Windows.Forms.TabPage TabPgTools;
         private System.Windows.Forms.TextBox TxtBoxFileInfo;
         private System.Windows.Forms.Label LblBrowseFile;
+        private System.Windows.Forms.TextBox TxtBoxBrowseFile;
+        private System.Windows.Forms.Button BtnBrowseFile;
+        private System.Windows.Forms.TextBox TxtBoxGroupInfo;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.ComboBox CmboBoxGroups;
     }
 }
 
