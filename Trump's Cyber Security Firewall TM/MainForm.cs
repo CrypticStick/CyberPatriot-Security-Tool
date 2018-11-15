@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
 using System.IO;
+using System.Management;
 using System.Net;
 using System.Security;
 using System.Security.Cryptography;
@@ -25,7 +26,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         public MainForm()
         {
             InitializeComponent();
-            MinimumSize = new System.Drawing.Size(690, 722);
+            MinimumSize = new System.Drawing.Size(520, 587);
             TxtBoxInfo.AppendText(Environment.UserName);
         }
 
@@ -79,6 +80,14 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
             UpdateProgramList();
             UpdateGroupList();
+        }
+
+
+        private void MainForm_Shown(object sender, EventArgs e)
+        {
+            this.WindowState = FormWindowState.Minimized;
+            this.Show();
+            this.WindowState = FormWindowState.Normal;
         }
 
         public delegate int mTask(PortableNumber p, params object[] args);
@@ -367,44 +376,59 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             if (stop) return 1;
 
             int endindex = 12;
-            OperatingSystem os = Environment.OSVersion;
-            Version vs = os.Version;
+            int Major = 0;
+            int Minor = 0;
 
-            if (os.Platform == PlatformID.Win32NT)
+            KeyValuePair<string, string> kvpOSSpecs = new KeyValuePair<string, string>();
+            ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Caption, Version FROM Win32_OperatingSystem");
+            try
             {
-                switch (vs.Major)
+
+                foreach (var os in searcher.Get())
                 {
-                    case 6:
-                        if (vs.Minor == 0)
-                        {
-                            endindex = 114; //Vista
-                            Log("WinVista detected.", false);
-                        }
-                        else if (vs.Minor == 1)
-                        {
-                            endindex = 116; //7
-                            Log("Win7 detected.", false);
-                        }
-                        else if (vs.Minor == 2)
-                        {
-                            endindex = 122; //8
-                            Log("Win8 detected.", false);
-                        }
-                        else
-                        {
-                            endindex = 122;   //8.1
-                            Log("Win8.1 detected.", false);
-                        }
-                        break;
-                    case 10:
-                        endindex = 126;    //10
-                        Log("Win10 detected.", false);
-                        break;
-                    default:
-                        Log("This version of Windows is not supported!", false);
-                        return 2;
+                    var version = os["Version"].ToString();
+                    var productName = os["Caption"].ToString();
+                    kvpOSSpecs = new KeyValuePair<string, string>(productName, version);
                 }
+
+                Major = Convert.ToInt32(kvpOSSpecs.Value.Split('.')[0]);
+                Minor = Convert.ToInt32(kvpOSSpecs.Value.Split('.')[1]);
             }
+            catch { }
+
+            switch (Major)
+            {
+                case 6:
+                    if (Minor == 0)
+                    {
+                        endindex = 114; //Vista
+                        Log("WinVista detected.", false);
+                    }
+                    else if (Minor == 1)
+                    {
+                        endindex = 116; //7
+                        Log("Win7 detected.", false);
+                    }
+                    else if (Minor == 2)
+                    {
+                        endindex = 122; //8
+                        Log("Win8 detected.", false);
+                    }
+                    else if (Minor == 3)
+                    {
+                        endindex = 122;   //8.1
+                        Log("Win8.1 detected.", false);
+                    }
+                    break;
+                case 10:
+                    endindex = 126;    //10
+                    Log("Win10 detected.", false);
+                    break;
+                default:
+                    Log("This version of Windows is not supported!", false);
+                    return 2;
+            }
+
 
             using (var key = AccessRegistryKey(@"SECURITY\Policy\PolAdtEv", true))
             {
@@ -417,6 +441,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     return 0;
                 }
             }
+
             return 3;
         }
 
@@ -486,7 +511,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
             String userAdminCmd;
 
-            foreach(string user in userList)
+            foreach (string user in userList)
             {
                 if (!usersOnSystem.Contains(user))
                 {
@@ -542,6 +567,13 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 CMD("net accounts /maxpwage:30", false);
                 CMD("net accounts /minpwage:10", false);
                 CMD("net accounts /uniquepw:8", false);
+                CMD("net accounts /lockoutthreshold:5", false);
+
+                CMD(@"secedit.exe /export /cfg C:\Windows\Temp\secconfig.cfg", true);
+                string text = File.ReadAllText(@"C:\Windows\Temp\secconfig.cfg");
+                text = text.Replace("PasswordComplexity = 0", "PasswordComplexity = 1");
+                File.WriteAllText(@"C:\Windows\Temp\secconfig.cfg", text);
+                CMD(@"secedit.exe / configure / db % windir %\securitynew.sdb / cfg C:\Windows\Temp\secconfig.cfg / areas SECURITYPOLICY", false);
 
                 using (RegistryKey key = AccessRegistryKey(
                     @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
@@ -564,8 +596,14 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 true))
                 {
                     if (key != null)
-                        key.SetValue("fAllowToGetHelp", (ChkRDP.Checked) ? 0 : 1);
+                        key.SetValue("fAllowToGetHelp", (ChkRDP.Checked) ? 1 : 0);
                     CMD($"netsh advfirewall firewall set rule group = \"Remote Assistance\" new enable=" + ((ChkRDP.Checked) ? "yes" : "no"), false);
+                }
+
+                foreach (string service in new string[] { "msftpsvc", "termservice" })
+                {
+                    CMD($"sc config \"{service}\" start= {((ChkRDP.Checked) ? "enabled" : "disabled")}", false);
+                    CMD($"sc {((ChkRDP.Checked) ? "start" : "stop")} \"{service}\"", false);
                 }
 
             }
@@ -682,7 +720,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         private int UpdateMalwareBytes(PortableNumber p, params object[] arg)
         {
             if (stop) return 1;
-            if (File.Exists(@"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe"))
+            if (File.Exists(@"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe") && !ChkForceReinstall.Checked)
             {
                 Log("MalwareBytes already installed.", true);
             }
@@ -703,14 +741,14 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         private int UpdateFirefox(PortableNumber p, params object[] arg)
         {
             if (stop) return 1;
-            if (File.Exists(@"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"))
+            if (File.Exists(@"C:\Program Files (x86)\Mozilla Firefox\firefox.exe") && !ChkForceReinstall.Checked)
             {
                 Log("Ensuring Firefox is up to date...", false);
                 Process.Start(@"C:\Program Files (x86)\Mozilla Firefox\updater.exe");
             }
-            else if (File.Exists(@"C:\Program Files\Mozilla Firefox\firefox.exe"))
+            else if (File.Exists(@"C:\Program Files\Mozilla Firefox\firefox.exe") && !ChkForceReinstall.Checked)
             {
-                Log("Ensuring Firefox is up to date...", false);
+                Log("Ensuring Firefox is up to date...", true);
                 Process.Start(@"C:\Program Files\Mozilla Firefox\updater.exe");
             }
             else
@@ -724,6 +762,28 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     InstallProgram,
                     "Firefox",
                     "-ms");
+            }
+            return 0;
+        }
+        private int UpdateNotepad(PortableNumber p, params object[] arg)
+        {
+            if (stop) return 1;
+            if (File.Exists(@"C:\Program Files (x86)\Notepad++\notepad++.exe") && !ChkForceReinstall.Checked)
+            {
+                Log("Ensuring Notepad++ is up to date...", true);
+                Process.Start(@"C:\Program Files (x86)\Notepad++\updater\GUP.exe");
+            }
+            else
+            {
+                new LogTask("Downloading Notepad++",
+                    DownloadProgram,
+                    "https://notepad-plus-plus.org/repository/7.x/7.6/npp.7.6.Installer.exe",
+                    "Notepad++");
+
+                new LogTask("Installing Notepad++",
+                    InstallProgram,
+                    "Notepad++",
+                    "/S");
             }
             return 0;
         }
@@ -817,9 +877,12 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
                 foreach (string badFile in badFiles)
                 {
-                    File.Move(badFile,
-                        badFile.Insert(badFile.LastIndexOf('.'), " (Deleted)"));
-                    Log($"'Deleted' {badFile}", true);
+                    if (!badFile.Contains("(Deleted)."))
+                    {
+                        File.Move(badFile,
+                            badFile.Insert(badFile.LastIndexOf('.'), " (Deleted)"));
+                        Log($"'Deleted' {badFile}", true);
+                    }
                 }
             }
             catch (Exception ex)
@@ -1040,6 +1103,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             new LogTask("Removing unauthorized files", RemoveUnauthorizedFiles); ++ProgressBar.Value;
             new LogTask("Setting up MalwareBytes", UpdateMalwareBytes); ++ProgressBar.Value;
             new LogTask("Setting up Firefox", UpdateFirefox); ++ProgressBar.Value;
+            new LogTask("Setting up Notepad++", UpdateNotepad); ++ProgressBar.Value;
             new LogTask("Uninstalling programs", UninstallPrograms); ++ProgressBar.Value;
             UpdateWindows(); ++ProgressBar.Value;
         }
@@ -1133,7 +1197,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         }
         private void CmboBoxGroups_SelectedIndexChanged(object sender, EventArgs e)
         {
-            using (var context = new PrincipalContext(ContextType.Domain))
+            using (var context = new PrincipalContext(ContextType.Machine))
             {
                 using (var group = GroupPrincipal.FindByIdentity(context, CmboBoxGroups.SelectedItem.ToString()))
                 {
@@ -1149,10 +1213,14 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     {
                         var users = group.GetMembers(true);
                         TxtBoxGroupInfo.Text = "Users: ";
-                        foreach (UserPrincipal user in users)
+                        try
                         {
-                            TxtBoxGroupInfo.AppendText(Environment.NewLine + user.Name);
+                            foreach (UserPrincipal user in users)
+                            {
+                                TxtBoxGroupInfo.AppendText(Environment.NewLine + user.Name);
+                            }
                         }
+                        catch (Exception ex) { }
                     }
                 }
             }
