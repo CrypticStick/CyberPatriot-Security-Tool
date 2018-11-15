@@ -1093,7 +1093,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 
         private void ListOfTasks(object sender, DoWorkEventArgs e)
         {
-            ProgressBar.Maximum = 8;
+            ProgressBar.Maximum = 9;
             ProgressBar.Step = 1;
             ProgressBar.Value = 0;
 
