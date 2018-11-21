@@ -209,7 +209,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 }
                 CmboBoxGroups.Update();
             }
-            catch (Exception ex) { }
+            catch (Exception ex) { Log(ex.Message, true); }
         }
 
         /// <summary>
@@ -871,9 +871,9 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         {
                             foreach (string file in Directory.GetFiles(dir, $"*.{extention}", SearchOption.TopDirectoryOnly))
                                 try { badFiles.Add(file); }
-                                catch (UnauthorizedAccessException ex) { }
+                                catch (UnauthorizedAccessException ex) { Log(ex.Message, true); }
                         }
-                        catch (Exception ex) { }
+                        catch (Exception ex) { Log(ex.Message, true); }
 
                 foreach (string badFile in badFiles)
                 {
@@ -1158,7 +1158,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 if (!Directory.Exists(@"C:\Windows\system32\config\systemprofile\Desktop"))
                     Directory.CreateDirectory(@"C:\Windows\system32\config\systemprofile\Desktop");
             }
-            catch (Exception ex) { }
+            catch (Exception ex) { Log(ex.Message, true); }
 
             if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
@@ -1192,7 +1192,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     "MD5 Hash: " + md5Hash;
 
                 }
-                catch (Exception ex) { }
+                catch (Exception ex) { Log(ex.Message, true); }
             }
         }
         private void CmboBoxGroups_SelectedIndexChanged(object sender, EventArgs e)
@@ -1220,7 +1220,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                                 TxtBoxGroupInfo.AppendText(Environment.NewLine + user.Name);
                             }
                         }
-                        catch (Exception ex) { }
+                        catch (Exception ex) { Log(ex.Message, true); }
                     }
                 }
             }
