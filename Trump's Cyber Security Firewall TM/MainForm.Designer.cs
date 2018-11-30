@@ -43,6 +43,7 @@
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.TabPgMain = new System.Windows.Forms.TabPage();
             this.TabPgConfig = new System.Windows.Forms.TabPage();
+            this.ChkForceReinstall = new System.Windows.Forms.CheckBox();
             this.ChkRDP = new System.Windows.Forms.CheckBox();
             this.LblProgramList = new System.Windows.Forms.Label();
             this.ChkLstBoxPrograms = new System.Windows.Forms.CheckedListBox();
@@ -56,7 +57,6 @@
             this.TxtBoxBrowseFile = new System.Windows.Forms.TextBox();
             this.BtnBrowseFile = new System.Windows.Forms.Button();
             this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
-            this.ChkForceReinstall = new System.Windows.Forms.CheckBox();
             this.tabControl1.SuspendLayout();
             this.TabPgMain.SuspendLayout();
             this.TabPgConfig.SuspendLayout();
@@ -222,6 +222,17 @@
             this.TabPgConfig.Text = "Config";
             this.TabPgConfig.UseVisualStyleBackColor = true;
             // 
+            // ChkForceReinstall
+            // 
+            this.ChkForceReinstall.AutoSize = true;
+            this.ChkForceReinstall.Location = new System.Drawing.Point(6, 47);
+            this.ChkForceReinstall.Margin = new System.Windows.Forms.Padding(2);
+            this.ChkForceReinstall.Name = "ChkForceReinstall";
+            this.ChkForceReinstall.Size = new System.Drawing.Size(138, 17);
+            this.ChkForceReinstall.TabIndex = 14;
+            this.ChkForceReinstall.Text = "Force Program Reinstall";
+            this.ChkForceReinstall.UseVisualStyleBackColor = true;
+            // 
             // ChkRDP
             // 
             this.ChkRDP.AutoSize = true;
@@ -364,17 +375,6 @@
             // openFileDialog
             // 
             this.openFileDialog.InitialDirectory = "C:\\Users";
-            // 
-            // ChkForceReinstall
-            // 
-            this.ChkForceReinstall.AutoSize = true;
-            this.ChkForceReinstall.Location = new System.Drawing.Point(6, 47);
-            this.ChkForceReinstall.Margin = new System.Windows.Forms.Padding(2);
-            this.ChkForceReinstall.Name = "ChkForceReinstall";
-            this.ChkForceReinstall.Size = new System.Drawing.Size(138, 17);
-            this.ChkForceReinstall.TabIndex = 14;
-            this.ChkForceReinstall.Text = "Force Program Reinstall";
-            this.ChkForceReinstall.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
