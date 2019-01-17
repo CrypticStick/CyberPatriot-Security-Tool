@@ -21,13 +21,15 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 {
     public partial class MainForm : Form
     {
-        public bool stop = false;
+        Applications apps;
+        public static bool stop = false;
 
         public MainForm()
         {
             InitializeComponent();
             MinimumSize = new System.Drawing.Size(520, 587);
             TxtBoxInfo.AppendText(Environment.UserName);
+            apps = new Applications(this);
         }
 
         private void ElevateUser()
@@ -78,7 +80,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 ElevateUser();
             }
 
-            UpdateProgramList();
+            UpdateUninstallList();
             UpdateGroupList();
         }
 
@@ -96,6 +98,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             public PortableNumber(int n) { Number = n; }
             public int Number { get; set; }
         }
+
         /// <summary>
         /// Takes a function and runs it with automatic logging.
         /// </summary>
@@ -119,8 +122,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             public LogTask(string message, mTask func, params object[] args)
             {
                 this.func = func;
-                form = (MainForm)(func.Target);
-                if (form.stop) return;
+                if (stop) return;
 
                 this.message = message;
                 this.args = args;
@@ -137,10 +139,10 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         percent = this.percent.Number;
                         Progress(percent);
                     }
-                    if (form.stop) break;
+                    if (stop) break;
                 }
                 int code = func.EndInvoke(result);
-                if (form.stop) Cancelled();
+                if (stop) Cancelled();
                 else if (code == 0) Done();
                 else Failed();
             }
@@ -172,7 +174,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
-        private void UpdateProgramList()
+        private void UpdateUninstallList()
         {
             using (RegistryKey key = AccessRegistryKey(
                     @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
@@ -180,19 +182,19 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             {
                 if (key != null)
                 {
-                    ChkLstBoxPrograms.Items.Clear();
+                    ChkLstBoxUninstall.Items.Clear();
                     foreach (string program in key.GetSubKeyNames())
                     {
                         string potentialString = Convert.ToString(key.OpenSubKey(program).GetValue("UninstallString"));
                         if (potentialString != null && potentialString != "")
                         {
                             string programName = Convert.ToString(key.OpenSubKey(program).GetValue("DisplayName"));
-                            ChkLstBoxPrograms.Items.Add(programName, false);
+                            ChkLstBoxUninstall.Items.Add(programName, false);
                         }
                     }
                 }
             }
-            ChkLstBoxPrograms.Update();
+            ChkLstBoxUninstall.Update();
         }
 
         private void UpdateGroupList()
@@ -215,7 +217,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         /// <summary>
         /// Logs the specified string to TxtBoxInfo on a new line.
         /// </summary>
-        private int Log(string message, bool debug)
+        public int Log(string message, bool debug)
         {
             if (!ChkDebug.Checked && debug) return -1;
             TxtBoxInfo.AppendText(Environment.NewLine);
@@ -267,7 +269,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         /// </summary>
         /// <param name="command">The command to pass into command prompt.</param>
         /// <param name="waitForExit">Whether the thread will lock until process completes.</param>
-        private int CMD(string command, bool waitForExit)
+        public int CMD(string command, bool waitForExit)
         {
             Process cmdTask = new Process();
             cmdTask.StartInfo.FileName = "CMD.exe";
@@ -344,7 +346,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         /// <param name="key">The registry key being accessed.</param>
         /// <param name="writable">Whether the key can be written to.</param>
         /// <returns>Returns a <see cref="Microsoft.Win32.RegistryKey"/> object, or null if an error occurs.</returns>
-        private RegistryKey AccessRegistryKey(string key, bool writable)
+        public RegistryKey AccessRegistryKey(string key, bool writable)
         {
             RegistryKey regKey = Registry.LocalMachine;
             RegistryKey OGKey = regKey;
@@ -615,230 +617,6 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             return 0;
         }
 
-        class mWebClient : WebClient
-        {
-            private PortableNumber PortableNumber;
-            public mWebClient(PortableNumber p)
-            {
-                PortableNumber = p;
-            }
-            public void SetNumber(int n)
-            {
-                PortableNumber.Number = n;
-            }
-        }
-
-        /// <summary>
-        /// Downloads file from specified url to windows Temp folder.
-        /// </summary>
-        /// <param name="p"></param>
-        /// <param name="args">1: url || 2: name</param>
-        /// <returns></returns>
-        private int DownloadProgram(PortableNumber p, params object[] args)
-        {
-            try
-            {
-                using (var client = new mWebClient(p))
-                {
-                    string uri = (string)args[0];
-                    string name = (string)args[1];
-                    Task.Delay(3000);
-                    client.DownloadFileAsync(new Uri(uri), $"C:\\Windows\\Temp\\{name}_setup.exe");
-                    client.DownloadProgressChanged += (s, e) =>
-                    {
-                        client.SetNumber(e.ProgressPercentage);
-                        if (stop)
-                        {
-                            client.CancelAsync();
-                            return;
-                        }
-                        Task.Delay(500);
-                    };
-                    while (client.IsBusy)
-                        if (stop) return 1;
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(ex.Message, true);
-                return 2;
-            }
-            return 0;
-        }
-
-        private int UninstallProgram(PortableNumber p, params object[] args)
-        {
-            try
-            {
-                string uninstallString = (string)args[0];
-                int exitCode = -1;
-
-                if (uninstallString != null || uninstallString != "")
-                    exitCode = CMD(uninstallString, true);
-                else return 2;
-                if (exitCode < 0) return 3;
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                Log(ex.Message, true);
-                return 4;
-            }
-        }
-
-        /// <summary>
-        /// Installs specified program name from windows Temp folder.
-        /// </summary>
-        /// <param name="p"></param>
-        /// <param name="args">1: name || 2: arg</param>
-        /// <returns></returns>
-        private int InstallProgram(PortableNumber p, params object[] args)
-        {
-            string name = (string)args[0];
-            string arg = (string)args[1];
-
-            if (File.Exists($"C:\\Windows\\Temp\\{name}_setup.exe"))
-                try
-                {
-                    int exitCode = CMD($"C:\\Windows\\Temp\\{name}_setup.exe {arg}", true);
-                    File.Delete($"C:\\Windows\\Temp\\{name}_setup.exe");
-                    if (exitCode != 0) return 2;
-                }
-                catch (Exception ex)
-                {
-                    Log(ex.Message, true);
-                    return 3;
-                }
-            else
-            {
-                Log($"File \"C:\\Windows\\Temp\\{ name}_setup.exe\" does not exist!", true);
-                return 4;
-            }
-            return 0;
-        }
-
-        private int UpdateMalwareBytes(PortableNumber p, params object[] arg)
-        {
-            if (stop) return 1;
-            if (File.Exists(@"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe") && !ChkForceReinstall.Checked)
-            {
-                Log("MalwareBytes already installed.", true);
-            }
-            else
-            {
-                new LogTask("Downloading MalwareBytes",
-                    DownloadProgram,
-                    "https://downloads.malwarebytes.com/file/mb3/",
-                    "MalwareBytes");
-
-                new LogTask("Installing MalwareBytes",
-                    InstallProgram,
-                    "MalwareBytes",
-                    "/VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log");
-            }
-            return 0;
-        }
-        private int UpdateFirefox(PortableNumber p, params object[] arg)
-        {
-            if (stop) return 1;
-            if (File.Exists(@"C:\Program Files (x86)\Mozilla Firefox\firefox.exe") && !ChkForceReinstall.Checked)
-            {
-                Log("Ensuring Firefox is up to date...", false);
-                Process.Start(@"C:\Program Files (x86)\Mozilla Firefox\updater.exe");
-            }
-            else if (File.Exists(@"C:\Program Files\Mozilla Firefox\firefox.exe") && !ChkForceReinstall.Checked)
-            {
-                Log("Ensuring Firefox is up to date...", true);
-                Process.Start(@"C:\Program Files\Mozilla Firefox\updater.exe");
-            }
-            else
-            {
-                new LogTask("Downloading Firefox",
-                    DownloadProgram,
-                    "https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US",
-                    "Firefox");
-
-                new LogTask("Installing Firefox",
-                    InstallProgram,
-                    "Firefox",
-                    "-ms");
-            }
-            return 0;
-        }
-        private int UpdateNotepad(PortableNumber p, params object[] arg)
-        {
-            if (stop) return 1;
-            if (File.Exists(@"C:\Program Files (x86)\Notepad++\notepad++.exe") && !ChkForceReinstall.Checked)
-            {
-                Log("Ensuring Notepad++ is up to date...", true);
-                Process.Start(@"C:\Program Files (x86)\Notepad++\updater\GUP.exe");
-            }
-            else
-            {
-                new LogTask("Downloading Notepad++",
-                    DownloadProgram,
-                    "https://notepad-plus-plus.org/repository/7.x/7.6/npp.7.6.Installer.exe",
-                    "Notepad++");
-
-                new LogTask("Installing Notepad++",
-                    InstallProgram,
-                    "Notepad++",
-                    "/S");
-            }
-            return 0;
-        }
-
-        private int UninstallPrograms(PortableNumber p, params object[] args)
-        {
-            if (ChkLstBoxPrograms.CheckedItems.Count < 1)
-            {
-                Log("No programs were selected for uninstallation.", false);
-                return 0;
-            }
-
-            using (RegistryKey key = AccessRegistryKey(
-        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-        true))
-            {
-                if (key != null)
-                {
-                    IEnumerator enumToUninstall = ChkLstBoxPrograms.CheckedItems.GetEnumerator();
-                    List<string> listToUninstall = new List<string>();
-                    while (enumToUninstall.MoveNext())
-                        listToUninstall.Add((string)enumToUninstall.Current);
-
-                    foreach (string program in key.GetSubKeyNames())
-                    {
-                        try
-                        {
-                            string programName = Convert.ToString(key.OpenSubKey(program).GetValue("DisplayName"));
-                            if (listToUninstall.Contains(programName))
-                            {
-                                string programStringQuiet = Convert.ToString(key.OpenSubKey(program).GetValue("QuietUninstallString"));
-                                string programString = Convert.ToString(key.OpenSubKey(program).GetValue("UninstallString"));
-                                if (programStringQuiet != null && programStringQuiet != "")
-                                    new LogTask($"Uninstalling {programName}", UninstallProgram, programStringQuiet);
-                                else if ((programString != null && programString != ""))
-                                    new LogTask($"Uninstalling {programName}", UninstallProgram, programString);
-                                else Log($"Cannot uninstall {programName}.", false);
-                                UpdateProgramList();
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex.Message, true);
-                            //return 2;
-                        }
-                    }
-                    return 0;
-                }
-                else
-                {
-                    return 3;
-                }
-            }
-        }
-
         private void GetAllFoldersUnder(string path, ref List<string> dirs)
         {
             try
@@ -904,7 +682,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             public void Invoke(ISearchJob downloadJob, ISearchCompletedCallbackArgs e)
             {
-                if (form.stop)
+                if (stop)
                 {
                     form.EditLog(searchLine, $"Checking for Windows Updates... CANCELLED", false);
                 }
@@ -943,7 +721,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             public void Invoke(IDownloadJob downloadJob, IDownloadCompletedCallbackArgs e)
             {
-                if (form.stop)
+                if (stop)
                 {
                     form.EditLog(downloadLine, $"Downloading Windows Updates... CANCELLED", false);
                 }
@@ -982,7 +760,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
             public void Invoke(IInstallationJob downloadJob, IInstallationCompletedCallbackArgs e)
             {
-                if (form.stop)
+                if (stop)
                 {
                     form.EditLog(installLine, $"Installing Windows Updates... CANCELLED", false);
                 }
@@ -1101,10 +879,10 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             new LogTask("Configuring users", ConfigureUsers); ++ProgressBar.Value;
             new LogTask("Configuring policy", ConfigurePolicy); ++ProgressBar.Value;
             new LogTask("Removing unauthorized files", RemoveUnauthorizedFiles); ++ProgressBar.Value;
-            new LogTask("Setting up MalwareBytes", UpdateMalwareBytes); ++ProgressBar.Value;
-            new LogTask("Setting up Firefox", UpdateFirefox); ++ProgressBar.Value;
-            new LogTask("Setting up Notepad++", UpdateNotepad); ++ProgressBar.Value;
-            new LogTask("Uninstalling programs", UninstallPrograms); ++ProgressBar.Value;
+            apps.InstallProgram(apps.MalawareBytes, ChkForceReinstall.Checked); ++ProgressBar.Value;
+            apps.InstallProgram(apps.Firefox, ChkForceReinstall.Checked); ++ProgressBar.Value;
+            apps.InstallProgram(apps.NotePadpp, ChkForceReinstall.Checked); ++ProgressBar.Value;
+            new LogTask("Uninstalling programs", apps.UninstallPrograms); ++ProgressBar.Value;
             UpdateWindows(); ++ProgressBar.Value;
         }
 
@@ -1128,7 +906,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     }
             }
 
-            UpdateProgramList();
+            UpdateUninstallList();
 
             if (stop)
                 Log(@"The wall was somewhat finished ¯\_(ツ)_/¯", false);

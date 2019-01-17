@@ -43,10 +43,12 @@
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.TabPgMain = new System.Windows.Forms.TabPage();
             this.TabPgConfig = new System.Windows.Forms.TabPage();
+            this.label2 = new System.Windows.Forms.Label();
+            this.ChkLstBoxInstall = new System.Windows.Forms.CheckedListBox();
             this.ChkForceReinstall = new System.Windows.Forms.CheckBox();
             this.ChkRDP = new System.Windows.Forms.CheckBox();
             this.LblProgramList = new System.Windows.Forms.Label();
-            this.ChkLstBoxPrograms = new System.Windows.Forms.CheckedListBox();
+            this.ChkLstBoxUninstall = new System.Windows.Forms.CheckedListBox();
             this.ChkDebug = new System.Windows.Forms.CheckBox();
             this.TabPgTools = new System.Windows.Forms.TabPage();
             this.CmboBoxGroups = new System.Windows.Forms.ComboBox();
@@ -205,10 +207,12 @@
             // 
             // TabPgConfig
             // 
+            this.TabPgConfig.Controls.Add(this.label2);
+            this.TabPgConfig.Controls.Add(this.ChkLstBoxInstall);
             this.TabPgConfig.Controls.Add(this.ChkForceReinstall);
             this.TabPgConfig.Controls.Add(this.ChkRDP);
             this.TabPgConfig.Controls.Add(this.LblProgramList);
-            this.TabPgConfig.Controls.Add(this.ChkLstBoxPrograms);
+            this.TabPgConfig.Controls.Add(this.ChkLstBoxUninstall);
             this.TabPgConfig.Controls.Add(this.ChkDebug);
             this.TabPgConfig.Controls.Add(this.LblAuthUser);
             this.TabPgConfig.Controls.Add(this.TxtBoxUsers);
@@ -221,6 +225,26 @@
             this.TabPgConfig.TabIndex = 1;
             this.TabPgConfig.Text = "Config";
             this.TabPgConfig.UseVisualStyleBackColor = true;
+            // 
+            // label2
+            // 
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(20, 323);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(125, 13);
+            this.label2.TabIndex = 16;
+            this.label2.Text = "Check programs to install";
+            // 
+            // ChkLstBoxInstall
+            // 
+            this.ChkLstBoxInstall.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.ChkLstBoxInstall.FormattingEnabled = true;
+            this.ChkLstBoxInstall.HorizontalScrollbar = true;
+            this.ChkLstBoxInstall.Location = new System.Drawing.Point(22, 340);
+            this.ChkLstBoxInstall.Name = "ChkLstBoxInstall";
+            this.ChkLstBoxInstall.Size = new System.Drawing.Size(218, 154);
+            this.ChkLstBoxInstall.TabIndex = 15;
             // 
             // ChkForceReinstall
             // 
@@ -255,16 +279,16 @@
             this.LblProgramList.TabIndex = 12;
             this.LblProgramList.Text = "Check programs to uninstall";
             // 
-            // ChkLstBoxPrograms
+            // ChkLstBoxUninstall
             // 
-            this.ChkLstBoxPrograms.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.ChkLstBoxUninstall.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.ChkLstBoxPrograms.FormattingEnabled = true;
-            this.ChkLstBoxPrograms.HorizontalScrollbar = true;
-            this.ChkLstBoxPrograms.Location = new System.Drawing.Point(248, 340);
-            this.ChkLstBoxPrograms.Name = "ChkLstBoxPrograms";
-            this.ChkLstBoxPrograms.Size = new System.Drawing.Size(218, 154);
-            this.ChkLstBoxPrograms.TabIndex = 11;
+            this.ChkLstBoxUninstall.FormattingEnabled = true;
+            this.ChkLstBoxUninstall.HorizontalScrollbar = true;
+            this.ChkLstBoxUninstall.Location = new System.Drawing.Point(248, 340);
+            this.ChkLstBoxUninstall.Name = "ChkLstBoxUninstall";
+            this.ChkLstBoxUninstall.Size = new System.Drawing.Size(218, 154);
+            this.ChkLstBoxUninstall.TabIndex = 11;
             // 
             // ChkDebug
             // 
@@ -413,7 +437,6 @@
         private System.Windows.Forms.TabPage TabPgMain;
         private System.Windows.Forms.TabPage TabPgConfig;
         private System.Windows.Forms.Label LblProgramList;
-        private System.Windows.Forms.CheckedListBox ChkLstBoxPrograms;
         private System.Windows.Forms.CheckBox ChkDebug;
         private System.Windows.Forms.CheckBox ChkRDP;
         private System.Windows.Forms.OpenFileDialog openFileDialog;
@@ -425,7 +448,10 @@
         private System.Windows.Forms.TextBox TxtBoxGroupInfo;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ComboBox CmboBoxGroups;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.CheckedListBox ChkLstBoxUninstall;
         private System.Windows.Forms.CheckBox ChkForceReinstall;
+        private System.Windows.Forms.CheckedListBox ChkLstBoxInstall;
     }
 }
 
