@@ -2,13 +2,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace Trump_s_Cyber_Security_Firewall_TM
 {
@@ -16,26 +12,36 @@ namespace Trump_s_Cyber_Security_Firewall_TM
     {
         MainForm form;
 
-        public ProgramInfo MalawareBytes = new ProgramInfo(
-            "MalawareBytes",
-            "https://downloads.malwarebytes.com/file/mb3/",
-            @"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe",
-            "/VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log"
-            );
+        public enum Program
+        {
+            MalwareBytes,
+            Firefox,
+            Notepadpp
+        }
 
-        public ProgramInfo Firefox = new ProgramInfo(
-            "Firefox",
-            "https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US",
-            @"C:\Program Files (x86)\Mozilla Firefox\firefox.exe",
-            "-ms"
-            );
+        readonly ProgramInfo[] programs = {
 
-        public ProgramInfo NotePadpp = new ProgramInfo(
-            "Notepad++",
-            "https://notepad-plus-plus.org/repository/7.x/7.6/npp.7.6.Installer.exe",
-            @"C:\Program Files (x86)\Notepad++\notepad++.exe",
-            "/S"
-            );
+            new ProgramInfo(
+                "MalawareBytes",
+                "https://downloads.malwarebytes.com/file/mb3/",
+                @"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe",
+                "/VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log"
+                ),
+
+            new ProgramInfo(
+                "Firefox",
+                "https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US",
+                @"C:\Program Files (x86)\Mozilla Firefox\firefox.exe",
+                "-ms"
+                ),
+
+            new ProgramInfo(
+                "Notepad++",
+                "https://notepad-plus-plus.org/repository/7.x/7.6/npp.7.6.Installer.exe",
+                @"C:\Program Files (x86)\Notepad++\notepad++.exe",
+                "/S"
+                )
+        };
 
         public Applications(MainForm form)
         {
@@ -187,10 +193,10 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             {
                 if (key != null)
                 {
-                    IEnumerator enumToUninstall = args.GetEnumerator();
+                    IEnumerator enumToUninstall = (IEnumerator)args[0];
                     List<string> listToUninstall = new List<string>();
                     while (enumToUninstall.MoveNext())
-                        listToUninstall.Add((string)enumToUninstall.Current);
+                        listToUninstall.Add(enumToUninstall.Current.ToString());
 
                     foreach (string program in key.GetSubKeyNames())
                     {
@@ -221,6 +227,21 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     return 3;
                 }
             }
+        }
+
+        public int InstallPrograms(MainForm.PortableNumber p, params object[] args)
+        {
+            try
+            {
+                IEnumerator enumToInstall = (IEnumerator)args[0];
+                while (enumToInstall.MoveNext())
+                    InstallProgram(programs[(int)enumToInstall.Current], MainForm.form.ChkForceReinstall.Checked);
+            }
+            catch (Exception ex)
+            {
+                return 1;
+            }
+            return 0;
         }
     }
 }

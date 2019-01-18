@@ -450,8 +450,8 @@
         private System.Windows.Forms.ComboBox CmboBoxGroups;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.CheckedListBox ChkLstBoxUninstall;
-        private System.Windows.Forms.CheckBox ChkForceReinstall;
         private System.Windows.Forms.CheckedListBox ChkLstBoxInstall;
+        public System.Windows.Forms.CheckBox ChkForceReinstall;
     }
 }
 

@@ -8,7 +8,6 @@ using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
 using System.IO;
 using System.Management;
-using System.Net;
 using System.Security;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -21,15 +20,26 @@ namespace Trump_s_Cyber_Security_Firewall_TM
 {
     public partial class MainForm : Form
     {
+        //------------------------------------//
+        //              Start Up              //
+        //------------------------------------//
+
         Applications apps;
         public static bool stop = false;
+        public static MainForm form;
 
         public MainForm()
         {
             InitializeComponent();
             MinimumSize = new System.Drawing.Size(520, 587);
             TxtBoxInfo.AppendText(Environment.UserName);
+            Init(this);
             apps = new Applications(this);
+        }
+
+        private static void Init(MainForm f)
+        {
+            form = f;
         }
 
         private void ElevateUser()
@@ -81,9 +91,9 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
 
             UpdateUninstallList();
+            UpdateInstallList();
             UpdateGroupList();
         }
-
 
         private void MainForm_Shown(object sender, EventArgs e)
         {
@@ -91,6 +101,10 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             this.Show();
             this.WindowState = FormWindowState.Normal;
         }
+
+        //------------------------------------//
+        //          Special Classes           //
+        //------------------------------------//
 
         public delegate int mTask(PortableNumber p, params object[] args);
         public class PortableNumber
@@ -122,8 +136,8 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             public LogTask(string message, mTask func, params object[] args)
             {
                 this.func = func;
+                form = MainForm.form;
                 if (stop) return;
-
                 this.message = message;
                 this.args = args;
                 logLine = form.Log(message + "...", false);
@@ -174,6 +188,112 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
+        public class Search_OnCompleted : ISearchCompletedCallback
+        {
+            MainForm form;
+            int searchLine;
+            public Search_OnCompleted(MainForm mainForm, int searchLine)
+            {
+                form = mainForm;
+                this.searchLine = searchLine;
+            }
+            public void Invoke(ISearchJob downloadJob, ISearchCompletedCallbackArgs e)
+            {
+                if (stop)
+                {
+                    form.EditLog(searchLine, $"Checking for Windows Updates... CANCELLED", false);
+                }
+                else
+                {
+                    form.searched = true;
+                    form.EditLog(searchLine, $"Checking for Windows Updates... DONE",
+                        false);
+                }
+            }
+        }
+
+        public class Download_OnProgressChanged : IDownloadProgressChangedCallback
+        {
+            MainForm form;
+            int downloadLine;
+            public Download_OnProgressChanged(MainForm mainForm, int downloadLine)
+            {
+                form = mainForm;
+                this.downloadLine = downloadLine;
+            }
+            public void Invoke(IDownloadJob downloadJob, IDownloadProgressChangedCallbackArgs e)
+            {
+                form.EditLog(downloadLine, $"Downloading Windows Updates... {LogTask.LoadingBar(e.Progress.PercentComplete)}", false);
+            }
+        }
+
+        public class Download_OnCompleted : IDownloadCompletedCallback
+        {
+            MainForm form;
+            int downloadLine;
+            public Download_OnCompleted(MainForm mainForm, int downloadLine)
+            {
+                form = mainForm;
+                this.downloadLine = downloadLine;
+            }
+            public void Invoke(IDownloadJob downloadJob, IDownloadCompletedCallbackArgs e)
+            {
+                if (stop)
+                {
+                    form.EditLog(downloadLine, $"Downloading Windows Updates... CANCELLED", false);
+                }
+                else
+                {
+                    form.downloaded = true;
+                    form.EditLog(downloadLine, $"Downloading Windows Updates... 100% [========DONE========]",
+                        false);
+                }
+            }
+        }
+
+        public class Install_OnProgressChanged : IInstallationProgressChangedCallback
+        {
+            MainForm form;
+            int installLine;
+            public Install_OnProgressChanged(MainForm mainForm, int installLine)
+            {
+                form = mainForm;
+                this.installLine = installLine;
+            }
+            public void Invoke(IInstallationJob downloadJob, IInstallationProgressChangedCallbackArgs e)
+            {
+                form.EditLog(installLine, $"Installing Windows Updates... {LogTask.LoadingBar(e.Progress.PercentComplete)}", false);
+            }
+        }
+
+        public class Install_OnCompleted : IInstallationCompletedCallback
+        {
+            MainForm form;
+            int installLine;
+            public Install_OnCompleted(MainForm mainForm, int installLine)
+            {
+                form = mainForm;
+                this.installLine = installLine;
+            }
+            public void Invoke(IInstallationJob downloadJob, IInstallationCompletedCallbackArgs e)
+            {
+                if (stop)
+                {
+                    form.EditLog(installLine, $"Installing Windows Updates... CANCELLED", false);
+                }
+                else
+                {
+                    form.installed = true;
+                    form.EditLog(installLine, $"Installing Windows Updates... 100% [========DONE========]",
+                        false);
+                }
+            }
+        }
+
+        //------------------------------------//
+        //             Functions              //
+        //------------------------------------//
+
         private void UpdateUninstallList()
         {
             using (RegistryKey key = AccessRegistryKey(
@@ -195,6 +315,13 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 }
             }
             ChkLstBoxUninstall.Update();
+        }
+
+        private void UpdateInstallList()
+        {
+            ChkLstBoxInstall.Items.Clear();
+            foreach (Applications.Program program in (Applications.Program[])Enum.GetValues(typeof(Applications.Program)))
+                ChkLstBoxInstall.Items.Add(program.ToString());
         }
 
         private void UpdateGroupList()
@@ -371,6 +498,42 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 regKey.Close();
                 return null;
             }
+        }
+
+        private void GetAllFoldersUnder(string path, ref List<string> dirs)
+        {
+            try
+            {
+                if ((File.GetAttributes(path) & FileAttributes.ReparsePoint)
+                    != FileAttributes.ReparsePoint)
+                {
+                    foreach (string folder in Directory.GetDirectories(path))
+                    {
+                        dirs.Add(folder);
+                        GetAllFoldersUnder(folder, ref dirs);
+                    }
+                }
+            }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        //------------------------------------//
+        //            Main Tasks              //
+        //------------------------------------//
+
+        private void ListOfTasks(object sender, DoWorkEventArgs e)
+        {
+            ProgressBar.Maximum = 9;
+            ProgressBar.Step = 1;
+            ProgressBar.Value = 0;
+
+            new LogTask("Enabling auditing", EnableAuditing); ++ProgressBar.Value;
+            new LogTask("Configuring users", ConfigureUsers); ++ProgressBar.Value;
+            new LogTask("Configuring policy", ConfigurePolicy); ++ProgressBar.Value;
+            new LogTask("Removing unauthorized files", RemoveUnauthorizedFiles); ++ProgressBar.Value;
+            new LogTask("Uninstalling programs", apps.UninstallPrograms, ChkLstBoxUninstall.CheckedIndices.GetEnumerator()); ++ProgressBar.Value;
+            new LogTask("Installing programs", apps.InstallPrograms, ChkLstBoxInstall.CheckedIndices.GetEnumerator()); ++ProgressBar.Value;
+            UpdateWindows(); ++ProgressBar.Value;
         }
 
         private int EnableAuditing(PortableNumber p, params object[] args)
@@ -617,23 +780,6 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             return 0;
         }
 
-        private void GetAllFoldersUnder(string path, ref List<string> dirs)
-        {
-            try
-            {
-                if ((File.GetAttributes(path) & FileAttributes.ReparsePoint)
-                    != FileAttributes.ReparsePoint)
-                {
-                    foreach (string folder in Directory.GetDirectories(path))
-                    {
-                        dirs.Add(folder);
-                        GetAllFoldersUnder(folder, ref dirs);
-                    }
-                }
-            }
-            catch (UnauthorizedAccessException) { }
-        }
-
         private int RemoveUnauthorizedFiles(PortableNumber p, params object[] args)
         {
             try
@@ -669,108 +815,6 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 return 2;
             }
             return 0;
-        }
-
-        public class Search_OnCompleted : ISearchCompletedCallback
-        {
-            MainForm form;
-            int searchLine;
-            public Search_OnCompleted(MainForm mainForm, int searchLine)
-            {
-                form = mainForm;
-                this.searchLine = searchLine;
-            }
-            public void Invoke(ISearchJob downloadJob, ISearchCompletedCallbackArgs e)
-            {
-                if (stop)
-                {
-                    form.EditLog(searchLine, $"Checking for Windows Updates... CANCELLED", false);
-                }
-                else
-                {
-                    form.searched = true;
-                    form.EditLog(searchLine, $"Checking for Windows Updates... DONE",
-                        false);
-                }
-            }
-        }
-
-        public class Download_OnProgressChanged : IDownloadProgressChangedCallback
-        {
-            MainForm form;
-            int downloadLine;
-            public Download_OnProgressChanged(MainForm mainForm, int downloadLine)
-            {
-                form = mainForm;
-                this.downloadLine = downloadLine;
-            }
-            public void Invoke(IDownloadJob downloadJob, IDownloadProgressChangedCallbackArgs e)
-            {
-                form.EditLog(downloadLine, $"Downloading Windows Updates... {LogTask.LoadingBar(e.Progress.PercentComplete)}", false);
-            }
-        }
-
-        public class Download_OnCompleted : IDownloadCompletedCallback
-        {
-            MainForm form;
-            int downloadLine;
-            public Download_OnCompleted(MainForm mainForm, int downloadLine)
-            {
-                form = mainForm;
-                this.downloadLine = downloadLine;
-            }
-            public void Invoke(IDownloadJob downloadJob, IDownloadCompletedCallbackArgs e)
-            {
-                if (stop)
-                {
-                    form.EditLog(downloadLine, $"Downloading Windows Updates... CANCELLED", false);
-                }
-                else
-                {
-                    form.downloaded = true;
-                    form.EditLog(downloadLine, $"Downloading Windows Updates... 100% [========DONE========]",
-                        false);
-                }
-            }
-        }
-
-        public class Install_OnProgressChanged : IInstallationProgressChangedCallback
-        {
-            MainForm form;
-            int installLine;
-            public Install_OnProgressChanged(MainForm mainForm, int installLine)
-            {
-                form = mainForm;
-                this.installLine = installLine;
-            }
-            public void Invoke(IInstallationJob downloadJob, IInstallationProgressChangedCallbackArgs e)
-            {
-                form.EditLog(installLine, $"Installing Windows Updates... {LogTask.LoadingBar(e.Progress.PercentComplete)}", false);
-            }
-        }
-
-        public class Install_OnCompleted : IInstallationCompletedCallback
-        {
-            MainForm form;
-            int installLine;
-            public Install_OnCompleted(MainForm mainForm, int installLine)
-            {
-                form = mainForm;
-                this.installLine = installLine;
-            }
-            public void Invoke(IInstallationJob downloadJob, IInstallationCompletedCallbackArgs e)
-            {
-                if (stop)
-                {
-                    form.EditLog(installLine, $"Installing Windows Updates... CANCELLED", false);
-                }
-                else
-                {
-                    form.installed = true;
-                    form.EditLog(installLine, $"Installing Windows Updates... 100% [========DONE========]",
-                        false);
-                }
-            }
         }
 
         bool searched;
@@ -869,58 +913,9 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             }
         }
 
-        private void ListOfTasks(object sender, DoWorkEventArgs e)
-        {
-            ProgressBar.Maximum = 9;
-            ProgressBar.Step = 1;
-            ProgressBar.Value = 0;
-
-            new LogTask("Enabling auditing", EnableAuditing); ++ProgressBar.Value;
-            new LogTask("Configuring users", ConfigureUsers); ++ProgressBar.Value;
-            new LogTask("Configuring policy", ConfigurePolicy); ++ProgressBar.Value;
-            new LogTask("Removing unauthorized files", RemoveUnauthorizedFiles); ++ProgressBar.Value;
-            apps.InstallProgram(apps.MalawareBytes, ChkForceReinstall.Checked); ++ProgressBar.Value;
-            apps.InstallProgram(apps.Firefox, ChkForceReinstall.Checked); ++ProgressBar.Value;
-            apps.InstallProgram(apps.NotePadpp, ChkForceReinstall.Checked); ++ProgressBar.Value;
-            new LogTask("Uninstalling programs", apps.UninstallPrograms); ++ProgressBar.Value;
-            UpdateWindows(); ++ProgressBar.Value;
-        }
-
-        BackgroundWorker tasks;
-        private async void BtnSecure_Click(object sender, EventArgs e)
-        {
-            BtnSecure.Enabled = false;
-            tasks = new BackgroundWorker();
-            tasks.WorkerSupportsCancellation = true;
-            tasks.DoWork += new DoWorkEventHandler(ListOfTasks);
-            tasks.RunWorkerAsync();
-
-            BtnStop.Enabled = true;
-            while (tasks.IsBusy)
-            {
-                await Task.Delay(500);
-                if (stop) try { tasks.CancelAsync(); }
-                    catch (Exception ex)
-                    {
-                        Log(ex.Message, true);
-                    }
-            }
-
-            UpdateUninstallList();
-
-            if (stop)
-                Log(@"The wall was somewhat finished ¯\_(ツ)_/¯", false);
-            else
-                Log("The wall has been built!", false);
-
-            Log("Note: 9/10 doctors agree the computer must be restarted!", false);
-            Log("----------------------------------------------------", false);
-
-            ProgressBar.Value = 0;
-            stop = false;
-            BtnStop.Enabled = false;
-            BtnSecure.Enabled = true;
-        }
+        //------------------------------------//
+        //            GUI Events              //
+        //------------------------------------//
 
         private void BtnStop_Click(object sender, EventArgs e)
         {
@@ -1002,6 +997,42 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     }
                 }
             }
+        }
+
+        BackgroundWorker tasks;
+        private async void BtnSecure_Click(object sender, EventArgs e)
+        {
+            BtnSecure.Enabled = false;
+            tasks = new BackgroundWorker();
+            tasks.WorkerSupportsCancellation = true;
+            tasks.DoWork += new DoWorkEventHandler(ListOfTasks);
+            tasks.RunWorkerAsync();
+
+            BtnStop.Enabled = true;
+            while (tasks.IsBusy)
+            {
+                await Task.Delay(500);
+                if (stop) try { tasks.CancelAsync(); }
+                    catch (Exception ex)
+                    {
+                        Log(ex.Message, true);
+                    }
+            }
+
+            UpdateUninstallList();
+
+            if (stop)
+                Log(@"The wall was somewhat finished ¯\_(ツ)_/¯", false);
+            else
+                Log("The wall has been built!", false);
+
+            Log("Note: 9/10 doctors agree the computer must be restarted!", false);
+            Log("----------------------------------------------------", false);
+
+            ProgressBar.Value = 0;
+            stop = false;
+            BtnStop.Enabled = false;
+            BtnSecure.Enabled = true;
         }
 
         //TODO:
