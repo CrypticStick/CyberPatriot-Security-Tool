@@ -124,13 +124,13 @@
             // 
             this.BtnStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.BtnStop.Enabled = false;
-            this.BtnStop.Font = new System.Drawing.Font("Comic Sans MS", 24F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.BtnStop.Font = new System.Drawing.Font("Comic Sans MS", 16F, System.Drawing.FontStyle.Bold);
             this.BtnStop.ForeColor = System.Drawing.Color.Red;
             this.BtnStop.Location = new System.Drawing.Point(312, 3);
             this.BtnStop.Name = "BtnStop";
             this.BtnStop.Size = new System.Drawing.Size(158, 301);
             this.BtnStop.TabIndex = 10;
-            this.BtnStop.Text = "Abandon office";
+            this.BtnStop.Text = "Shutdown the government!";
             this.Tltp_Btns.SetToolTip(this.BtnStop, "Stops building the wall.");
             this.BtnStop.UseVisualStyleBackColor = false;
             this.BtnStop.Click += new System.EventHandler(this.BtnStop_Click);
@@ -230,7 +230,7 @@
             // 
             this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(20, 323);
+            this.label2.Location = new System.Drawing.Point(6, 300);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(125, 13);
             this.label2.TabIndex = 16;
@@ -241,7 +241,7 @@
             this.ChkLstBoxInstall.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.ChkLstBoxInstall.FormattingEnabled = true;
             this.ChkLstBoxInstall.HorizontalScrollbar = true;
-            this.ChkLstBoxInstall.Location = new System.Drawing.Point(22, 340);
+            this.ChkLstBoxInstall.Location = new System.Drawing.Point(6, 340);
             this.ChkLstBoxInstall.Name = "ChkLstBoxInstall";
             this.ChkLstBoxInstall.Size = new System.Drawing.Size(218, 154);
             this.ChkLstBoxInstall.TabIndex = 15;
@@ -249,7 +249,7 @@
             // ChkForceReinstall
             // 
             this.ChkForceReinstall.AutoSize = true;
-            this.ChkForceReinstall.Location = new System.Drawing.Point(6, 47);
+            this.ChkForceReinstall.Location = new System.Drawing.Point(9, 319);
             this.ChkForceReinstall.Margin = new System.Windows.Forms.Padding(2);
             this.ChkForceReinstall.Name = "ChkForceReinstall";
             this.ChkForceReinstall.Size = new System.Drawing.Size(138, 17);

@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Trump_s_Cyber_Security_Firewall_TM
@@ -16,7 +17,9 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         {
             MalwareBytes,
             Firefox,
-            Notepadpp
+            Notepadpp,
+            Geany,
+            Java
         }
 
         readonly ProgramInfo[] programs = {
@@ -24,23 +27,38 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             new ProgramInfo(
                 "MalawareBytes",
                 "https://downloads.malwarebytes.com/file/mb3/",
-                @"C:\Program Files\Malwarebytes\Anti-Malware\mbam.exe",
+                @"Malwarebytes\Anti-Malware\mbam.exe",
                 "/VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /SP- /LOG= %TEMP%\\mb3_install.log"
                 ),
 
             new ProgramInfo(
                 "Firefox",
                 "https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US",
-                @"C:\Program Files (x86)\Mozilla Firefox\firefox.exe",
+                @"Mozilla Firefox\firefox.exe",
                 "-ms"
                 ),
 
             new ProgramInfo(
                 "Notepad++",
                 "https://notepad-plus-plus.org/repository/7.x/7.6/npp.7.6.Installer.exe",
-                @"C:\Program Files (x86)\Notepad++\notepad++.exe",
+                @"Notepad++\notepad++.exe",
                 "/S"
+                ),
+
+            new ProgramInfo(
+                "Geany",
+                "https://download.geany.org/geany-1.34.1_setup.exe",
+                @"geany\bin\geany",
+                "/S"
+                ),
+
+            new ProgramInfo(
+                "Java",
+                "https://javadl.oracle.com/webapps/download/AutoDL?BundleId=236857_42970487e3af4f5aa5bca3f542482c60",
+                @"Java",
+                "/s"
                 )
+
         };
 
         public Applications(MainForm form)
@@ -112,21 +130,22 @@ namespace Trump_s_Cyber_Security_Firewall_TM
         public int InstallProgram(string name, string url, string installFile, bool force, string arg)
         {
             if (MainForm.stop) return 1;
-            if (File.Exists(installFile) && !force)
+            string[] installLocations = { @"C:\", @"C:\Program Files\", @"C:\Program Files (x86)\" };
+            foreach (string location in installLocations)
+            if (File.Exists(location + installFile))
             {
                 form.Log($"{name} installed.", true);
+                break;
             }
-            else
+            else if ((File.Exists(location + installFile) && force) || (installLocations[installLocations.Length-1] == location) && !File.Exists(location + installFile))
             {
                 new MainForm.LogTask($"Downloading {name}",
                         (_p, _args) =>
                         {
-
                             try
                             {
                                 using (var client = new mWebClient(_p))
                                 {
-                                    Task.Delay(3000);
                                     client.DownloadFileAsync(new Uri(url), $"C:\\Windows\\Temp\\{name}_setup.exe");
                                     client.DownloadProgressChanged += (s, e) =>
                                     {
@@ -139,7 +158,10 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                                         Task.Delay(500);
                                     };
                                     while (client.IsBusy)
+                                    {
                                         if (MainForm.stop) return 1;
+                                        Thread.Sleep(500);
+                                    }
                                 }
                             }
                             catch (Exception ex)
@@ -175,6 +197,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         return 0;
 
                     });
+                    break;
             }
             return 0;
         }

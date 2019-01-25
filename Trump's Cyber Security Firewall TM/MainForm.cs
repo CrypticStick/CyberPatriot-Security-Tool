@@ -12,6 +12,7 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WUApiLib;
@@ -154,6 +155,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         Progress(percent);
                     }
                     if (stop) break;
+                    Thread.Sleep(500);
                 }
                 int code = func.EndInvoke(result);
                 if (stop) Cancelled();
@@ -690,7 +692,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 if (user.Equals("Administrator") || user.Equals("Guest"))
                 {
                     Log($"Ensuring {user} is disabled...", true);
-                    userAdminCmd = $"net user \"{user}\" /active:no";
+                    userAdminCmd = $"net user \"{user}\" /active:no & wmic useraccount where name='{user}' rename '{user}-Renamed'";
                 }
                 else
                 {
@@ -741,29 +743,82 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 CMD(@"secedit.exe / configure / db % windir %\securitynew.sdb / cfg C:\Windows\Temp\secconfig.cfg / areas SECURITYPOLICY", false);
 
                 using (RegistryKey key = AccessRegistryKey(
-                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
-                    true))
-                {
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", true))
                     if (key != null)
                         key.SetValue("EnableLUA", 1);
-                }
 
                 using (RegistryKey key = AccessRegistryKey(
-                @"SYSTEM\CurrentControlSet\Control\Terminal Server",
-                true))
-                {
+                @"SOFTWARE\Policies\Microsoft\Windows NT\Reliability", true))
+                    if (key != null)
+                    {
+                        key.SetValue("ShutdownReason", 1);
+                        key.SetValue("OnShutdownReasonUI", 1);
+                    }
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer", true))
+                    if (key != null)
+                    {
+                        key.SetValue("NoControlPanel", 1);
+                        key.SetValue("NoRun", 1);
+                    }
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SYSTEM\CurrentControlSet\Control\Lsa", true))
+                    if (key != null)
+                    {
+                        key.SetValue("auditbasedirectories", 1);
+                        key.SetValue("auditbaseobjects", 1);
+                        //key.SetValue("crashonauditfail", 1);
+                        key.SetValue("fullprivilegeauditing", 1);
+                        key.SetValue("LimitBlankPasswordUse", 1);
+                        key.SetValue("RestrictAnonymous", 1);
+                        key.SetValue("RestrictAnonymousSAM", 1);
+                    }
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SOFTWARE\Classes\Msi.Package\DefaultIcon", true))
+                    if (key != null)
+                        key.SetValue(null, @"C:\Windows\System32\msiexec.exe,1");
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SOFTWARE\Policies\Microsoft\Windows", true))
+                    if (key != null)
+                    {
+                        key.CreateSubKey("WindowsUpdate").CreateSubKey("AU").
+                            SetValue("NoAutoRebootWithLoggedOnUsers", 1);
+                        key.CreateSubKey("RemovableStorageDevices").
+                            SetValue("Deny_All", 1);
+                    }
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SYSTEM\CurrentControlSet\Services\USBSTOR", true))
+                    if (key != null)
+                        key.SetValue("Start", 4);
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SYSTEM\CurrentControlSet\Control", true))
+                    if (key != null)
+                        key.CreateSubKey("StorageDevicePolicies").
+                            SetValue("WriteProtect", 1);
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SOFTWARE\Policies\Microsoft\Windows\System", true))
+                    if (key != null)
+                        key.SetValue("DisableCMD", 1);
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SYSTEM\CurrentControlSet\Control\Terminal Server", true))
                     if (key != null)
                         key.SetValue("fDenyTSConnections", (ChkRDP.Checked) ? 0 : 1);
-                }
 
                 using (RegistryKey key = AccessRegistryKey(
-                @"SYSTEM\CurrentControlSet\Control\Remote Assistance",
-                true))
-                {
+                @"SYSTEM\CurrentControlSet\Control\Remote Assistance", true))
                     if (key != null)
+                    { 
                         key.SetValue("fAllowToGetHelp", (ChkRDP.Checked) ? 1 : 0);
-                    CMD($"netsh advfirewall firewall set rule group = \"Remote Assistance\" new enable=" + ((ChkRDP.Checked) ? "yes" : "no"), false);
-                }
+                        CMD($"netsh advfirewall firewall set rule group = \"Remote Assistance\" new enable=" + ((ChkRDP.Checked) ? "yes" : "no"), false);
+                    }
 
                 foreach (string service in new string[] { "msftpsvc", "termservice" })
                 {
@@ -847,7 +902,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     EditLog(searchLine, "Checking for Windows Updates... CANCELLED", false);
                     return;
                 }
-                Task.Delay(500);
+                Thread.Sleep(500);
             }
             ISearchResult searchResult = updateSearcher.EndSearch(searchJob);
             EditLog(searchLine, "Checking for Windows Updates... DONE", false);
@@ -870,7 +925,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         EditLog(downloadLine, "Downloading Windows Updates... CANCELLED", false);
                         return;
                     }
-                    Task.Delay(500);
+                    Thread.Sleep(500);
                 }
                 downloader.EndDownload(downloadJob);
 
@@ -906,7 +961,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         EditLog(installLine, "Installing Windows Updates... CANCLLED", false);
                         return;
                     }
-                    Task.Delay(500);
+                    Thread.Sleep(500);
                 }
                 installer.EndInstall(installationJob);
                 EditLog(installLine, "Installing Windows Updates... DONE", false);
