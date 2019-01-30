@@ -759,8 +759,8 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer", true))
                     if (key != null)
                     {
-                        key.SetValue("NoControlPanel", 1);
-                        key.SetValue("NoRun", 1);
+                        key.SetValue("NoControlPanel", (ChkDisableIT.Checked) ? 1 : 0);
+                        key.SetValue("NoRun", (ChkDisableIT.Checked) ? 1 : 0);
                     }
 
                 using (RegistryKey key = AccessRegistryKey(
@@ -769,12 +769,20 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                     {
                         key.SetValue("auditbasedirectories", 1);
                         key.SetValue("auditbaseobjects", 1);
-                        //key.SetValue("crashonauditfail", 1);
+                        //key.SetValue("crashonauditfail", 1); BIG BAD, DO NOT
                         key.SetValue("fullprivilegeauditing", 1);
                         key.SetValue("LimitBlankPasswordUse", 1);
                         key.SetValue("RestrictAnonymous", 1);
                         key.SetValue("RestrictAnonymousSAM", 1);
                     }
+
+                CMD("sc config srservice start= Auto", false);
+                CMD("net start srservice", false);
+
+                using (RegistryKey key = AccessRegistryKey(
+                @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore", true))
+                    if (key != null)
+                        key.SetValue("DisableSR", 0);
 
                 using (RegistryKey key = AccessRegistryKey(
                 @"SOFTWARE\Classes\Msi.Package\DefaultIcon", true))
@@ -805,7 +813,7 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                 using (RegistryKey key = AccessRegistryKey(
                 @"SOFTWARE\Policies\Microsoft\Windows\System", true))
                     if (key != null)
-                        key.SetValue("DisableCMD", 1);
+                        key.SetValue("DisableCMD", (ChkDisableIT.Checked) ? 1 : 0);
 
                 using (RegistryKey key = AccessRegistryKey(
                 @"SYSTEM\CurrentControlSet\Control\Terminal Server", true))

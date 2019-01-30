@@ -59,6 +59,7 @@
             this.TxtBoxBrowseFile = new System.Windows.Forms.TextBox();
             this.BtnBrowseFile = new System.Windows.Forms.Button();
             this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
+            this.ChkDisableIT = new System.Windows.Forms.CheckBox();
             this.tabControl1.SuspendLayout();
             this.TabPgMain.SuspendLayout();
             this.TabPgConfig.SuspendLayout();
@@ -207,6 +208,7 @@
             // 
             // TabPgConfig
             // 
+            this.TabPgConfig.Controls.Add(this.ChkDisableIT);
             this.TabPgConfig.Controls.Add(this.label2);
             this.TabPgConfig.Controls.Add(this.ChkLstBoxInstall);
             this.TabPgConfig.Controls.Add(this.ChkForceReinstall);
@@ -400,6 +402,17 @@
             // 
             this.openFileDialog.InitialDirectory = "C:\\Users";
             // 
+            // ChkDisableIT
+            // 
+            this.ChkDisableIT.AutoSize = true;
+            this.ChkDisableIT.Location = new System.Drawing.Point(6, 47);
+            this.ChkDisableIT.Margin = new System.Windows.Forms.Padding(2);
+            this.ChkDisableIT.Name = "ChkDisableIT";
+            this.ChkDisableIT.Size = new System.Drawing.Size(193, 17);
+            this.ChkDisableIT.TabIndex = 17;
+            this.ChkDisableIT.Text = "Disable CMD / Run / Control Panel";
+            this.ChkDisableIT.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -452,6 +465,7 @@
         private System.Windows.Forms.CheckedListBox ChkLstBoxUninstall;
         private System.Windows.Forms.CheckedListBox ChkLstBoxInstall;
         public System.Windows.Forms.CheckBox ChkForceReinstall;
+        private System.Windows.Forms.CheckBox ChkDisableIT;
     }
 }
 
