@@ -425,6 +425,15 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             return 0;
         }
 
+        public int ModifyFeature(string feature, bool enable)
+        {
+            return CMD("DISM /online /" + 
+                ((enable == true) ? "enable-feature" : "disable-feature") + 
+                $"/featurename:{feature} /Quiet /NoRestart",
+                true
+                );
+        }
+
         /// <summary>
         /// Converts an array of bytes into a hexideciamal string.
         /// </summary>
@@ -727,6 +736,8 @@ namespace Trump_s_Cyber_Security_Firewall_TM
             if (stop) return 1;
             try
             {
+                ModifyFeature("Internet-Explorer-Optional-amd64", true);
+
                 CMD("wmic UserAccount set PasswordExpires=True", false);
                 CMD("NetSh Advfirewall set allprofiles state on", false);
 
@@ -827,6 +838,8 @@ namespace Trump_s_Cyber_Security_Firewall_TM
                         key.SetValue("fAllowToGetHelp", (ChkRDP.Checked) ? 1 : 0);
                         CMD($"netsh advfirewall firewall set rule group = \"Remote Assistance\" new enable=" + ((ChkRDP.Checked) ? "yes" : "no"), false);
                     }
+
+                ModifyFeature("TelnetClient", ChkRDP.Checked);
 
                 foreach (string service in new string[] { "msftpsvc", "termservice" })
                 {
