@@ -9,10 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Terminal.Gui" Version="0.16.0" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="dotnet-install.sh">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
