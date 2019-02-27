@@ -32,7 +32,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
         public void Reload()
         {
-            CurrentMenu.RunMenu().Invoke();
+            CurrentMenu.WriteMenu();
         }
 
         void CheckWindow()
@@ -62,21 +62,24 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
     internal class Menu
     {
-        public delegate void MenuProc();
-        MenuProc ThisMenu;
+        List<Label> Labels = new List<Label>();
 
         string Title = "New Menu";
         ConsoleColor Background = ConsoleColor.DarkBlue;
 
         public Menu()
         {
-            ThisMenu = () => {
-                Console.Clear();
-                Console.BackgroundColor = Background;
-                Console.Title = $"Trump's Console Cyber Security Firewall TM - {Title}";
-                Console.WriteLine(CreateHeader(Title));
-                Console.WriteLine();
-            };
+        }
+
+        public Menu(string title)
+        {
+            Title = title;
+        }
+
+        public Menu(string title, ConsoleColor background)
+        {
+            Title = title;
+            Background = background;
         }
 
         public Menu SetTitle(string title)
@@ -93,13 +96,23 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
         public Menu AddLabel(Label label)
         {
-            ThisMenu += label.WriteLabel();
+            Labels.Add(label);
             return this;
         }
 
-        internal MenuProc RunMenu()
+        public void WriteMenu()
         {
-            return ThisMenu;
+            Console.Clear();
+            Console.BackgroundColor = Background;
+            Console.Title = $"Trump's Console Cyber Security Firewall TM - {Title}";
+            Console.WriteLine(CreateHeader(Title));
+            Console.WriteLine();
+
+            foreach (Label label in Labels)
+                label.WriteLabel();
+
+            Console.CursorLeft = 0;
+            Console.CursorTop = Console.BufferHeight;
         }
 
         string CreateHeader(string title)
@@ -111,51 +124,94 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             st.Append('<', (totalChar - title.Length) / 2);
             return st.ToString();
         }
+    }
 
-        internal class Button
+    internal class Button
+    {
+        public event EventHandler ButtonClickedEvent;
+
+        string FirstLine = "";
+        string SecondLine = "";
+        string ThirdLine = "";
+
+        public Button(string text)
         {
-            public event EventHandler ButtonClickedEvent;
+            FirstLine = new string('-', text.Length);
+            SecondLine = $"|{text}|";
+            ThirdLine = new string('-', text.Length);
+        }
+    }
 
-            string FirstLine = "";
-            string SecondLine = "";
-            string ThirdLine = "";
-            public Button(string text)
-            {
-                FirstLine = new string('-', text.Length);
-                SecondLine = $"|{text}|";
-                ThirdLine = new string('-', text.Length);
-            }
+    internal class Label
+    {
+        AnchorSide Anchor = AnchorSide.Left | AnchorSide.Top;
+        string Text = "New Label";
+        int DistVert = 0;
+        int DistHori = 0;
+
+        public Label()
+        {
         }
 
-        internal class Label
+        public Label(string text)
         {
-            string Text = "New Label";
-            int PosRow = 0;
-            int PosCol = 0;
+            Text = text;
+        }
 
-            public Label(string text)
-            {
-                Text = text;
-            }
+        public Label(string text, AnchorSide anchor)
+        {
+            Text = text;
+            Anchor = anchor;
+        }
 
-            public Label SetPosition(int x, int y)
-            {
-                PosCol = (Console.BufferWidth < x) ?
-                    Console.BufferWidth : x;
-                PosRow = (Console.BufferHeight < y) ?
-                    Console.BufferHeight : y;
-                return this;
-            }
+        public Label(string text, AnchorSide anchor, int distHori, int distVert)
+        {
+            Text = text;
+            Anchor = anchor;
+            DistVert = distVert;
+            DistHori = distHori;
 
-            public MenuProc WriteLabel()
-            {
-                return () =>
-                {
-                    Console.CursorLeft = PosCol;
-                    Console.CursorTop = PosRow;
-                    Console.Write(Text);
-                };
-            }
+        }
+
+        public Label SetPosition(int distHori, int distVert)
+        {
+            if (distHori < 0 || distVert < 0) throw new InvalidOperationException();
+            DistHori = (Console.BufferWidth < distHori) ?
+                Console.BufferWidth : distHori;
+            DistVert = (Console.BufferHeight < distVert) ?
+                Console.BufferHeight : distVert;
+            return this;
+        }
+
+        public enum AnchorSide
+        {
+            Left = 1,
+            Right = 2,
+            Top = 4,
+            Bottom = 8
+        }
+
+        public Label SetAnchor(AnchorSide anchor)
+        {
+            Anchor = anchor;
+            return this;
+        }
+
+        public Label EditLabel(string text)
+        {
+            Text = text;
+            return this;
+        }
+
+        public void WriteLabel()
+        {
+            Console.CursorLeft =
+                (Anchor.HasFlag(AnchorSide.Left)) ? DistHori :
+                (Anchor.HasFlag(AnchorSide.Right)) ? Console.BufferWidth - DistHori : 0;
+            Console.CursorTop = 
+                (Anchor.HasFlag(AnchorSide.Top)) ? DistVert :
+                (Anchor.HasFlag(AnchorSide.Bottom)) ? Console.BufferHeight - DistVert : 0;
+            Console.Write(Text);
         }
     }
 
