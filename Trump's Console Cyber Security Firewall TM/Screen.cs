@@ -112,7 +112,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 label.WriteLabel();
 
             Console.CursorLeft = 0;
-            Console.CursorTop = Console.BufferHeight;
+            Console.CursorTop = Console.WindowHeight;
         }
 
         string CreateHeader(string title)
@@ -176,10 +176,10 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
         public Label SetPosition(int distHori, int distVert)
         {
             if (distHori < 0 || distVert < 0) throw new InvalidOperationException();
-            DistHori = (Console.BufferWidth < distHori) ?
-                Console.BufferWidth : distHori;
-            DistVert = (Console.BufferHeight < distVert) ?
-                Console.BufferHeight : distVert;
+            DistHori = (Console.WindowWidth < distHori) ?
+                Console.WindowWidth : distHori;
+            DistVert = (Console.WindowHeight < distVert) ?
+                Console.WindowHeight : distVert;
             return this;
         }
 
@@ -207,10 +207,10 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
         {
             Console.CursorLeft =
                 (Anchor.HasFlag(AnchorSide.Left)) ? DistHori :
-                (Anchor.HasFlag(AnchorSide.Right)) ? Console.BufferWidth - DistHori : 0;
+                (Anchor.HasFlag(AnchorSide.Right)) ? Console.WindowWidth - DistHori : 0;
             Console.CursorTop = 
                 (Anchor.HasFlag(AnchorSide.Top)) ? DistVert :
-                (Anchor.HasFlag(AnchorSide.Bottom)) ? Console.BufferHeight - DistVert : 0;
+                (Anchor.HasFlag(AnchorSide.Bottom)) ? Console.WindowHeight - DistVert : 0;
             Console.Write(Text);
         }
     }
