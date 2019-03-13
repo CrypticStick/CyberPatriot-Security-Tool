@@ -13,14 +13,17 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
         int LastWidth = 0;
         int LastHeight = 0;
 
+        Thread t1;
+        Thread t2;
+
         public Screen(Menu defaultMenu)
         {
             SetMenu(defaultMenu);
 
-            var t1 = new Thread(() => CheckWindow());
+            t1 = new Thread(() => CheckWindow());
             t1.Start();
 
-            var t2 = new Thread(() => CheckInput());
+            t2 = new Thread(() => CheckInput());
             t2.Start();
         }
 
@@ -102,8 +105,9 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
         public void WriteMenu()
         {
-            Console.Clear();
+            Console.CursorVisible = false;
             Console.BackgroundColor = Background;
+            Console.Clear();
             Console.Title = $"Trump's Console Cyber Security Firewall TM - {Title}";
             Console.WriteLine(CreateHeader(Title));
             Console.WriteLine();
@@ -112,7 +116,8 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 label.WriteLabel();
 
             Console.CursorLeft = 0;
-            Console.CursorTop = Console.WindowHeight;
+            Console.CursorTop = Console.WindowHeight-1;
+            Console.CursorVisible = true;
         }
 
         string CreateHeader(string title)
@@ -205,7 +210,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
         public void WriteLabel()
         {
-            Console.CursorLeft =
+            Console.CursorLeft = 
                 (Anchor.HasFlag(AnchorSide.Left)) ? DistHori :
                 (Anchor.HasFlag(AnchorSide.Right)) ? Console.WindowWidth - DistHori : 0;
             Console.CursorTop = 

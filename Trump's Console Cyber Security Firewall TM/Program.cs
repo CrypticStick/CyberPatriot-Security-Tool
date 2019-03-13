@@ -10,6 +10,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
         static private Screen MyScreen;
         static private Menu MainMenu;
         static private Menu ConfigMenu;
+        private static readonly ConsoleColor StartColor = Console.BackgroundColor;
 
         static void Main(string[] args)
         {
@@ -57,6 +58,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
         static void Quit()
         {
+            Console.BackgroundColor = StartColor;
             Console.Clear();
             Environment.Exit(0);
         }
