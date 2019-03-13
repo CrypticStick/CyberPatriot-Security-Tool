@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using static Trump_s_Console_Cyber_Security_Firewall_TM.Label;
+using static Trump_s_Console_Cyber_Security_Firewall_TM.MenuItem;
 using static Trump_s_Console_Cyber_Security_Firewall_TM.Screen;
 
 namespace Trump_s_Console_Cyber_Security_Firewall_TM
@@ -15,10 +16,11 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
         static void Main(string[] args)
         {
             MainMenu = new Menu("Main", ConsoleColor.DarkRed);
-            MainMenu.AddLabel(new Label("Bazinga", AnchorSide.Left | AnchorSide.Top, 10, 4));
+            MainMenu.Add(new Label("Bazinga", AnchorSide.Left | AnchorSide.Top, 10, 4));
+            //MainMenu.Add(new Button());
 
             ConfigMenu = new Menu("Config",ConsoleColor.DarkGreen);
-            ConfigMenu.AddLabel(new Label("Kachow", AnchorSide.Right | AnchorSide.Bottom, 10, 4));
+            ConfigMenu.Add(new Label("Kachow", AnchorSide.Right | AnchorSide.Bottom, 10, 4));
 
             MyScreen = new Screen(MainMenu);
 

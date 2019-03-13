@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Trump_s_Console_Cyber_Security_Firewall_TM
 {
@@ -19,6 +20,8 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
         public Screen(Menu defaultMenu)
         {
             SetMenu(defaultMenu);
+
+            WindowResizedEvent += OnWindowResized;
 
             t1 = new Thread(() => CheckWindow());
             t1.Start();
@@ -47,10 +50,9 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 {
                     LastWidth = Console.WindowWidth;
                     LastHeight = Console.WindowHeight;
-                    Reload();
                     WindowResizedEvent?.Invoke(null, EventArgs.Empty);
                 }
-                Thread.Sleep(100);
+                Thread.Sleep(10);
             }
         }
 
@@ -61,11 +63,16 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 KeyReceivedEvent?.Invoke(null, new KeyReceivedArgs(Console.ReadKey()));
             }
         }
+
+        void OnWindowResized(object sender, EventArgs e)
+        {
+            Reload();
+        }
     }
 
     internal class Menu
     {
-        List<Label> Labels = new List<Label>();
+        List<MenuItem> Items = new List<MenuItem>();
 
         string Title = "New Menu";
         ConsoleColor Background = ConsoleColor.DarkBlue;
@@ -97,9 +104,9 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             return this;
         }
 
-        public Menu AddLabel(Label label)
+        public Menu Add(MenuItem item)
         {
-            Labels.Add(label);
+            Items.Add(item);
             return this;
         }
 
@@ -112,11 +119,10 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             Console.WriteLine(CreateHeader(Title));
             Console.WriteLine();
 
-            foreach (Label label in Labels)
-                label.WriteLabel();
+            foreach (MenuItem item in Items)
+                item.WriteItem();
 
-            Console.CursorLeft = 0;
-            Console.CursorTop = Console.WindowHeight-1;
+            Console.SetCursorPosition(0, Console.WindowHeight - 1);
             Console.CursorVisible = true;
         }
 
@@ -131,28 +137,101 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
         }
     }
 
-    internal class Button
+    internal abstract class MenuItem
+    {
+        protected AnchorSide Anchor = AnchorSide.Left | AnchorSide.Top;
+        protected int DistVert = 0;
+        protected int DistHori = 0;
+
+        public MenuItem()
+        {
+        }
+
+        public MenuItem SetPosition(int distHori, int distVert)
+        {
+            if (distHori < 0 || distVert < 0) throw new InvalidOperationException();
+            DistHori = (Console.WindowWidth < distHori) ?
+                Console.WindowWidth : distHori;
+            DistVert = (Console.WindowHeight < distVert) ?
+                Console.WindowHeight : distVert;
+            return this;
+        }
+
+        public enum AnchorSide
+        {
+            Left = 1,
+            Right = 2,
+            Top = 4,
+            Bottom = 8
+        }
+
+        public MenuItem SetAnchor(AnchorSide anchor)
+        {
+            Anchor = anchor;
+            return this;
+        }
+
+        public void MoveCursorToWrite()
+        {
+            Console.SetCursorPosition(
+
+                (Anchor.HasFlag(AnchorSide.Left)) ? DistHori :
+                (Anchor.HasFlag(AnchorSide.Right)) ? Console.WindowWidth - DistHori : 0,
+
+                (Anchor.HasFlag(AnchorSide.Top)) ? DistVert :
+                (Anchor.HasFlag(AnchorSide.Bottom)) ? Console.WindowHeight - DistVert : 0
+
+                );
+        }
+
+        public abstract void WriteItem();
+    }
+
+    internal class Button : MenuItem
     {
         public event EventHandler ButtonClickedEvent;
 
-        string FirstLine = "";
-        string SecondLine = "";
-        string ThirdLine = "";
+        string Text = "New Label";
+
+        public Button()
+        {
+        }
 
         public Button(string text)
         {
-            FirstLine = new string('-', text.Length);
-            SecondLine = $"|{text}|";
-            ThirdLine = new string('-', text.Length);
+            Text = text;
+        }
+
+        public Button(string text, AnchorSide anchor)
+        {
+            Text = text;
+            Anchor = anchor;
+        }
+
+        public Button(string text, AnchorSide anchor, int distHori, int distVert)
+        {
+            Text = text;
+            Anchor = anchor;
+            DistVert = distVert;
+            DistHori = distHori;
+        }
+
+        public Button EditText(string text)
+        {
+            Text = text;
+            return this;
+        }
+
+        public override void WriteItem()
+        {
+            MoveCursorToWrite();
+            Console.Write(Text);
         }
     }
 
-    internal class Label
+    internal class Label : MenuItem
     {
-        AnchorSide Anchor = AnchorSide.Left | AnchorSide.Top;
         string Text = "New Label";
-        int DistVert = 0;
-        int DistHori = 0;
 
         public Label()
         {
@@ -178,44 +257,15 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
         }
 
-        public Label SetPosition(int distHori, int distVert)
-        {
-            if (distHori < 0 || distVert < 0) throw new InvalidOperationException();
-            DistHori = (Console.WindowWidth < distHori) ?
-                Console.WindowWidth : distHori;
-            DistVert = (Console.WindowHeight < distVert) ?
-                Console.WindowHeight : distVert;
-            return this;
-        }
-
-        public enum AnchorSide
-        {
-            Left = 1,
-            Right = 2,
-            Top = 4,
-            Bottom = 8
-        }
-
-        public Label SetAnchor(AnchorSide anchor)
-        {
-            Anchor = anchor;
-            return this;
-        }
-
-        public Label EditLabel(string text)
+        public Label EditText(string text)
         {
             Text = text;
             return this;
         }
 
-        public void WriteLabel()
+        public override void WriteItem()
         {
-            Console.CursorLeft = 
-                (Anchor.HasFlag(AnchorSide.Left)) ? DistHori :
-                (Anchor.HasFlag(AnchorSide.Right)) ? Console.WindowWidth - DistHori : 0;
-            Console.CursorTop = 
-                (Anchor.HasFlag(AnchorSide.Top)) ? DistVert :
-                (Anchor.HasFlag(AnchorSide.Bottom)) ? Console.WindowHeight - DistVert : 0;
+            MoveCursorToWrite();
             Console.Write(Text);
         }
     }
