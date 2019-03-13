@@ -1,16 +1,33 @@
 ﻿using System;
-using static Trump_s_Console_Cyber_Security_Firewall_TM.Menus;
+using System.Diagnostics;
+using static Trump_s_Console_Cyber_Security_Firewall_TM.Label;
+using static Trump_s_Console_Cyber_Security_Firewall_TM.MenuItem;
+using static Trump_s_Console_Cyber_Security_Firewall_TM.Screen;
 
 namespace Trump_s_Console_Cyber_Security_Firewall_TM
 {
     class Program
     {
-        static private Menus MyMenu;
+        static private Screen MyScreen;
+        static private Menu MainMenu;
+        static private Menu ConfigMenu;
+        private static readonly ConsoleColor StartColor = Console.BackgroundColor;
+
         static void Main(string[] args)
         {
-            MyMenu = new Menus();
-            MyMenu.WindowResizedEvent += OnWindowResized;
-            MyMenu.KeyReceivedEvent += OnKeyReceived;
+            MainMenu = new Menu("Main", ConsoleColor.DarkRed);
+            MainMenu.Add(new Label("Bazinga", AnchorSide.Left | AnchorSide.Top, 10, 4));
+            //MainMenu.Add(new Button());
+
+            ConfigMenu = new Menu("Config",ConsoleColor.DarkGreen);
+            ConfigMenu.Add(new Label("Kachow", AnchorSide.Right | AnchorSide.Bottom, 10, 4));
+
+            MyScreen = new Screen(MainMenu);
+
+            MyScreen.WindowResizedEvent += OnWindowResized;
+            MyScreen.KeyReceivedEvent += OnKeyReceived;
+
+            //Secure();
         }
 
         static void OnWindowResized(object sender, EventArgs e)
@@ -25,21 +42,51 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                     Quit();
                     break;
                 case (ConsoleKey.M):
-                    MyMenu.SetMenu(MenuSelect.Main);
+                    MyScreen.SetMenu(MainMenu);
                     break;
                 case (ConsoleKey.C):
-                    MyMenu.SetMenu(MenuSelect.Config);
+                    MyScreen.SetMenu(ConfigMenu);
                     break;
                 default:
-                    MyMenu.Reload();
+                    MyScreen.Reload();
                     break;
             }
         }
 
+        static void Secure()
+        {
+            var output = "echo \"this is a test\" > testFileha.txt".Bash();
+        }
+
         static void Quit()
         {
+            Console.BackgroundColor = StartColor;
             Console.Clear();
             Environment.Exit(0);
+        }
+    }
+
+    public static class ShellHelper
+    {
+        public static string Bash(this string cmd)
+        {
+            var escapedArgs = cmd.Replace("\"", "\\\"");
+
+            var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "/bin/bash",
+                    Arguments = $"-c \"{escapedArgs}\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                }
+            };
+            process.Start();
+            string result = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return result;
         }
     }
 }
