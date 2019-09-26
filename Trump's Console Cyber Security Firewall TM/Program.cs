@@ -5,6 +5,8 @@ using static Trump_s_Console_Cyber_Security_Firewall_TM.Label;
 using static Trump_s_Console_Cyber_Security_Firewall_TM.MenuItem;
 using static Trump_s_Console_Cyber_Security_Firewall_TM.Screen;
 using System.Text;
+using System.IO;
+using System.Threading;
 
 namespace Trump_s_Console_Cyber_Security_Firewall_TM
 {
@@ -12,12 +14,14 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
     {
         static private Screen MyScreen;
         static private Menu MainMenu, ConfigMenu;
+        static private Label status;
         private static readonly ConsoleColor StartColor = Console.BackgroundColor;
 
         static void Main(string[] args)
         {
             MainMenu = new Menu("Main", Color.DarkRed);
-            MainMenu.Add(new Label("Bazinga", AnchorSide.Left | AnchorSide.Top, 10, 4, Color.Black));
+            status = new Label("> Waiting for commands...", AnchorSide.Left | AnchorSide.Top, 2, 3, Color.Black);
+            MainMenu.Add(status);
             //MainMenu.Add(new Button("Button 1", AnchorSide.Right | AnchorSide.Top, 20, 10, Color.BlueViolet));
 
             ConfigMenu = new Menu("Config",Color.DarkGreen);
@@ -55,7 +59,10 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
         {
             StringBuilder sb = new StringBuilder();
             foreach (string text in newText)
+            {
+                $"/bin/bash -c 'if [ ! -d \"{filepath}\" ]; then\nsudo touch \"{filepath}\"\nfi'".Bash();
                 sb.Append($"sudo echo -e \"\n{text}\" >> {filepath}".Bash());
+            }
             return sb.ToString();
         }
 
@@ -81,7 +88,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             StringBuilder sb = new StringBuilder();
             foreach (string name in names)
                 sb.Append(name + " ");
-            return $"sudo apt-get install {sb.ToString()}".Bash();
+            return $"sudo apt-get install {sb.ToString()} -y".Bash();
         }
 
         static string RemovePackages(params string[] names)
@@ -89,7 +96,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             StringBuilder sb = new StringBuilder();
             foreach (string name in names)
                 sb.Append(name + " ");
-            return $"sudo apt-get remove {sb.ToString()}".Bash();
+            return $"sudo apt-get remove {sb.ToString()} -y".Bash();
         }
         static string DisableSysCtl(params string[] names)
         {
@@ -99,11 +106,68 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             return sb.ToString();
         }
 
+        static void LogStatus(string message)
+        {
+            status.EditText("> " + message);
+            MyScreen.Reload();
+        }
+
         static void Secure()
         {
-            "sudo apt-get update".Bash();
-            InstallPackages("aide", "aide-common", "selinux", "apparmor", "ntp", "chrony", 
-                "tcpd", "iptables", "rsyslog", "syslog-ng", "libpam-pwquality");
+            File.Delete("log.txt");
+            LogStatus("Running TRUMP_SECURE.EXE.sh...");
+
+            if ("sudo apt-get update".Bash().Contains("\nE: ")) {
+                LogStatus("ERROR: Failed to update packages.");
+                return;
+            }
+
+            //TODO: Improve GUI! :D
+            //TODO: Add skipped commands
+            //TODO: Do auditing to check if commands are really required
+            //TODO: Add additional security commands
+            //TODO: Automate user configuration with README file
+            //TODO: Show live log
+            //TODO: Add completed task counter
+            //TODO: Add installation progress bar
+            LogStatus("Installing packages...");
+            string[] toInstall = {"aide", "aide-common", "selinux", "chrony",
+                "tcpd", "iptables", "rsyslog", "libpam-pwquality"};
+            string results = InstallPackages(toInstall);
+            if (results.Contains("Some packages could not be installed."))
+            {
+                LogStatus("Failed to install packages, attempting force >:)");
+                "sudo apt-get remove syslog-ng -y".Bash(); //interferes with rsyslog
+                "sudo apt-get install -f -y".Bash();    //force any broken dependencies to install
+                results = InstallPackages(toInstall);
+                if (results.Contains("Some packages could not be installed."))
+                {
+                    LogStatus("ERROR: Failed to install packages :(");
+                    return;
+                }
+            }
+
+            if (results.Contains("Could not get lock"))
+            {
+                LogStatus("WARNING: dpkg locked, breaking in!!...");
+                "sudo rm /var/lib/dpkg/lock*".Bash();
+                results = InstallPackages(toInstall);
+            }
+
+            if (results.Contains("dpkg was interrupted"))
+            {
+                LogStatus("WARNING: dpkg interrupted, attempting fix...");
+                "sudo dpkg --configure -a".Bash();
+                results = InstallPackages(toInstall);
+            }
+
+            if (results.Contains("\nE: "))
+            {
+                LogStatus("ERROR: Failed to install packages. Maybe try restarting the system?");
+                return;
+            }
+
+            LogStatus("Configuring CIS.conf...");
             AddStringsToFile("/etc/modprobe.d/CIS.conf", 
                 "install cramfs /bin/true",
                 "install freevxfs /bin/true",
@@ -115,13 +179,17 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 "install sctp /bin/true",
                 "install rds /bin/true",
                 "install tipc /bin/true"
-                );
+            );
+
+            LogStatus("Unloading unwanted modules...");
             "sudo rmmod cramfs".Bash();
             "sudo rmmod freevxfs".Bash();
             "sudo rmmod jffs2".Bash();
             "sudo rmmod hfs".Bash();
             "sudo rmmod hfsplus".Bash();
             "sudo rmmod udf".Bash();
+
+            LogStatus("Skipping important things ;)...");
             //Skipped "Ensure separate partition exists for /tmp"
             //Skipped "Ensure nodev option set on /tmp partition"
             //Skipped "Ensure nosuid option set on /tmp partition"
@@ -140,18 +208,84 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             //Skipped "Ensure nodev option set on removable media partitions"
             //Skipped "Ensure nosuid option set on removable media partitions"
             //Skipped "Ensure noexec option set on removable media partitions"
-            "sudo df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type d -perm -0002 2>/dev/null | xargs chmod a+t".Bash();
             //Skipped "Configure Software Updates"
             //Skipped "Ensure GPG keys are configured"
+            //Skipped "Ensure bootloader password is set"
+            //Skipped "Ensure XD/NX support is enabled"
+            //Skipped "Ensure no unconfined daemons exist"
+            //Skipped "Ensure AppArmor is not disabled in bootloader configuration" (SELinux already installed)
+            //Skipped "Ensure all AppArmor Profiles are enforcing" (SELinux already installed)
+            //Skipped "Ensure chargen services are not enabled"
+            //Skipped "Ensure daytime services are not enabled"
+            //Skipped "Ensure discard services are not enabled"
+            //Skipped "Ensure echo services are not enabled"
+            //Skipped "Ensure time services are not enabled"
+            //Skipped "Ensure rsh server is not enabled"
+            //Skipped "Ensure talk server is not enabled"
+            //Skipped "Ensure telnet server is not enabled"
+            //Skipped "Ensure tftp server is not enabled"
+            //Skipped "Ensure ntp is configured" (Chrony is already installed)
+            //Skipped "Ensure chrony is configured"
+            //Skipped "Ensure firewall rules exist for all open ports"
+            //Skipped "Ensure wireless interfaces are disabled"
+            //Skipped "Ensure audit log storage size is configured"
+            //Skipped "Ensure use of privileged commands is collected"
+            //Skipped "Ensure logrotate is configured"
+            //Skipped "Ensure SSH access is limited"
+            //Skipped "Ensure password expiration is 365 days or less"
+            //Skipped "Ensure minimum days between password changes is 7 or more"
+            //Skipped "Ensure password expiration warning days is 7 or more"
+            //Skipped "Ensure inactive password lock is 30 days or less"
+            //Skipped "Ensure all users last password change date is in the past"
+            //Skipped "Ensure default user umask is 027 or more restrictive"
+            //Skipped "Ensure default user shell timeout is 900 seconds or less"
+            //Skipped "Ensure root login is restricted to system console"
+            //Skipped "Ensure access to the su command is restricted"
+            //Skipped "Audit system file permissions"
+            //Skipped "Ensure no world writable files exist"
+            //Skipped "Ensure no unowned files or directories exist"
+            //Skipped "Ensure no ungrouped files or directories exist"
+            //Skipped "Audit SUID executables"
+            //Skipped "Audit SGID executables"
+            //Skipped "Ensure password fields are not empty"
+            //Skipped "Ensure no legacy "+" entries exist in /etc/passwd"
+            //Skipped "Ensure no legacy "+" entries exist in /etc/shadow"
+            //Skipped "Ensure no legacy "+" entries exist in /etc/group"
+            //Skipped "Ensure root is the only UID 0 account"
+            //Skipped "Ensure root PATH Integrity"
+            //SKipped "Ensure all users' home directories exist"
+            //Skipped "Ensure users' home directories permissions are 750 or more restrictive"
+            //Skipped "Ensure users own their home directories"
+            //Skipped "Ensure users' dot files are not group or world writable"
+            //Skipped "Ensure no users have .forward files"
+            //Skipped "Ensure no users have .netrc files"
+            //Skipped "Ensure users' .netrc Files are not group or world accessible"
+            //Skipped "Ensure no users have .rhosts files"
+            //Skipped "Ensure all groups in /etc/passwd exist in /etc/group"
+            //Skipped "Ensure no duplicate UIDs exist"
+            //Skipped "Ensure no duplicate GIDs exist"
+            //Skipped "Ensure no duplicate user names exist"
+            //Skipped "Ensure no duplicate group names exist"
+            //Skipped "Ensure shadow group is empty"
+
+            LogStatus("Ensuring sticky bit is set...");
+            "sudo df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type d -perm -0002 2>/dev/null | xargs chmod a+t".Bash();
+
+            LogStatus("Configuring aide...");
             "sudo aideinit".Bash();
+
+            LogStatus("Configuring crontab...");
             "sudo crontab -u root -l > temp-crontab".Bash();
             AddStringsToFile("temp-crontab", "0 5 * * * /usr/bin/aide --config /etc/aide/aide.conf --check");
             "sudo crontab -u root temp-crontab".Bash();
             "sudo chown root:root /boot/grub/grub.cfg".Bash();
             "sudo chmod og-rwx /boot/grub/grub.cfg".Bash();
-            //Skipped "Ensure bootloader password is set"
             "sudo echo $uperSuit76 | passwd --stdin root".Bash(); //TODO: FIX
+
+            LogStatus("Ensuring core dumps are restricted...");
             AddStringsToFile("/etc/security/limits.conf", "* hard core 0");
+
+            LogStatus("Configuring sysctl.conf...");
             SetFileParameters("/etc/sysctl.conf", "=",
                 "fs.suid_dumpable = 0",
                 "kernel.randomize_va_space = 2",
@@ -175,7 +309,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 "net.ipv6.conf.default.accept_ra = 0",
                 "net.ipv6.conf.all.accept_redirects = 0",
                 "net.ipv6.conf.default.accept_redirects = 0"
-                );
+            );
             "sudo sysctl -w fs.suid_dumpable=0".Bash();
             "sudo sysctl -w net.ipv4.ip_forward=0".Bash();
             "sudo sysctl -w net.ipv4.route.flush=1".Bash();
@@ -209,20 +343,23 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             "sudo sysctl -w net.ipv6.conf.all.accept_redirects=0".Bash();
             "sudo sysctl -w net.ipv6.conf.default.accept_redirects=0".Bash();
             "sudo sysctl -w net.ipv6.route.flush=1".Bash();
-            //Skipped "Ensure XD/NX support is enabled"
             "sudo sysctl -w kernel.randomize_va_space=2".Bash();
+
+            LogStatus("Disabling prelink...");
             "sudo prelink -ua".Bash();
+
+            LogStatus("Ensuring SELinux is not disabled...");
             ReplaceStringInFile("/etc/default/grub", "selinux=0","");
             ReplaceStringInFile("/etc/default/grub", "enforcing=0", "");
             "sudo update-grub".Bash();
+
+            LogStatus("Configuring SELinux...");
             SetFileParameters("/etc/selinux/configfile","=", 
                 "SELINUX=enforcing",
                 "SELINUXTYPE=ubuntu"
                 );
-            //Skipped "Ensure no unconfined daemons exist"
-            ReplaceStringInFile("/etc/selinux/configfile", "apparmor=0", "");
-            "sudo update-grub".Bash();
-            "sudo aa-enforce /etc/apparmor.d/*".Bash();
+
+            LogStatus("Configuring MOTD & banners...");
             ReplaceStringInFile("/etc/motd", "\\m", "");
             ReplaceStringInFile("/etc/motd", "\\r", "");
             ReplaceStringInFile("/etc/motd", "\\s", "");
@@ -253,28 +390,18 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 "banner-message-text='Authorized uses only. All activity may be monitored and reported.'"
                 );
             "sudo dconf update".Bash();
-            //Skipped "Ensure chargen services are not enabled"
-            //Skipped "Ensure daytime services are not enabled"
-            //Skipped "Ensure discard services are not enabled"
-            //Skipped "Ensure echo services are not enabled"
-            //Skipped "Ensure time services are not enabled"
-            //Skipped "Ensure rsh server is not enabled"
-            //Skipped "Ensure talk server is not enabled"
-            //Skipped "Ensure telnet server is not enabled"
-            //Skipped "Ensure tftp server is not enabled"
-            AddStringsToFile("/etc/ntp.conf", 
-                "restrict -4 default kod nomodify notrap nopeer noquery",
-                "restrict -6 default kod nomodify notrap nopeer noquery",
-                "server <remote-server>"
-                );
-            AddStringsToFile("/etc/init.d/ntp", "RUNASUSER=ntp");
-            //Skipped "Ensure chrony is configured"
+
+            LogStatus("Disabling unwanted packages...");
             DisableSysCtl("avahi-daemon", "cups", "isc-dhcp-server", 
                 "isc-dhcp-server6", "slapd", "nfs-server", "rpcbind",
                 "bind9", "vsftpd", "apache2", "dovecot", "smbd", 
                 "squid", "snmpd", "rsync", "nis", "xinetd", "autof");
+
+            LogStatus("Ensuring mail transfer agent is configured for local-only mode...");
             AddStringsToFile("/etc/postfix/main.cf", "inet_interfaces = loopback-only");
             "sudo systemctl restart postfix".Bash();
+
+            LogStatus("Configuring network security...");
             AddStringsToFile("/etc/default/grub", 
                 "GRUB_CMDLINE_LINUX=\"ipv6.disable = 1\"",
                 "GRUB_CMDLINE_LINUX=\"audit = 1\"");
@@ -296,9 +423,8 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             "sudo iptables -A INPUT -p tcp -m state --state ESTABLISHED -j ACCEPT".Bash();
             "sudo iptables -A INPUT -p udp -m state --state ESTABLISHED -j ACCEPT".Bash();
             "sudo iptables -A INPUT -p icmp -m state --state ESTABLISHED -j ACCEPT".Bash();
-            //Skipped "Ensure firewall rules exist for all open ports"
-            //Skipped "Ensure wireless interfaces are disabled"
-            //Skipped "Ensure audit log storage size is configured"
+
+            LogStatus("Configuring auditing service...");
             SetFileParameters("/etc/audit/auditd.conf", "=",
                 "space_left_action = email",
                 "action_mail_acct = root",
@@ -326,8 +452,6 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 "-w /etc/sysconfig/network -p wa -k system-locale",
                 "-w /etc/selinux/ -p wa -k MAC-policy",
                 "-w /usr/share/selinux/ -p wa -k MAC-policy",
-                "-w /etc/apparmor/ -p wa -k MAC-policy",
-                "-w /etc/apparmor.d/ -p wa -k MAC-policy",
                 "-w /var/log/faillog -p wa -k logins",
                 "-w /var/log/lastlog -p wa -k logins",
                 "-w /var/log/tallylog -p wa -k logins",
@@ -357,7 +481,8 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 "-a always,exit -F arch=b64 -S init_module -S delete_module -k modules",
                 "-e 2"
                 );
-            //Skipped "Ensure use of privileged commands is collected"
+
+            LogStatus("Configuring rsyslog...");
             "sudo systemctl enable rsyslog".Bash();
             AddStringsToFile("/etc/rsyslog.conf",
                 "*.emerg :omusrmsg:*",
@@ -375,36 +500,40 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 "local2,local3.* -/var/log/localmessages",
                 "local4,local5.* -/var/log/localmessages",
                 "local6,local7.* -/var/log/localmessages",
-                "$FileCreateMode 0640"
+                "$FileCreateMode 0640",
+                "$ModLoad imtcp", //only run if log host
+                "$InputTCPServerRun 514" //only run if log host
                 );
-            "sudo pkill -HUP rsyslogd".Bash();
             //Skipped "Ensure rsyslog is configured to send logs to a remote log host"
-            //Skipped " Ensure remote rsyslog messages are only accepted on designated log hosts"
-            "sudo update-rc.d syslog-ng enable".Bash();
-            AddStringsToFile("/etc/syslog-ng/syslog-ng.conf",
-                "log { source(src); source(chroots); filter(f_console); destination(console);};",
-                "log { source(src); source(chroots); filter(f_console); destination(xconsole);};",
-                "log { source(src); source(chroots); filter(f_newscrit); destination(newscrit); };",
-                "log { source(src); source(chroots); filter(f_newserr); destination(newserr);};",
-                "log { source(src); source(chroots); filter(f_newsnotice); destination(newsnotice);};",
-                "log { source(src); source(chroots); filter(f_mailinfo); destination(mailinfo);};",
-                "log { source(src); source(chroots); filter(f_mailwarn); destination(mailwarn);};",
-                "log { source(src); source(chroots); filter(f_mailerr); destination(mailerr);};",
-                "log { source(src); source(chroots); filter(f_mail); destination(mail);};",
-                "log { source(src); source(chroots); filter(f_acpid); destination(acpid); flags(final);};",
-                "log { source(src); source(chroots); filter(f_acpid_full); destination(devnull); flags(final);};",
-                "log { source(src); source(chroots); filter(f_acpid_old); destination(acpid); flags(final);};",
-                "log { source(src); source(chroots); filter(f_netmgm); destination(netmgm);flags(final);};",
-                "log { source(src); source(chroots); filter(f_local); destination(localmessages);};",
-                "log { source(src); source(chroots); filter(f_messages); destination(messages);};",
-                "log { source(src); source(chroots); filter(f_iptables); destination(firewall);};",
-                "log { source(src); source(chroots); filter(f_warn); destination(warn);};",
-                "options { chain_hostnames(off); flush_lines(0); perm(0640); stats_freq(3600);threaded(yes);};"
-                );
+            "sudo pkill -HUP rsyslogd".Bash();
+
+            //Not compatible with rsyslog
             //Skipped "Ensure syslog-ng is configured to send logs to a remote log host"
             //Skipped "Ensure remote syslog-ng messages are only accepted on designated log hosts"
+            //"sudo update-rc.d syslog-ng enable".Bash();
+            //AddStringsToFile("/etc/syslog-ng/syslog-ng.conf",
+            //    "log { source(src); source(chroots); filter(f_console); destination(console);};",
+            //    "log { source(src); source(chroots); filter(f_console); destination(xconsole);};",
+            //    "log { source(src); source(chroots); filter(f_newscrit); destination(newscrit); };",
+            //    "log { source(src); source(chroots); filter(f_newserr); destination(newserr);};",
+            //    "log { source(src); source(chroots); filter(f_newsnotice); destination(newsnotice);};",
+            //    "log { source(src); source(chroots); filter(f_mailinfo); destination(mailinfo);};",
+            //    "log { source(src); source(chroots); filter(f_mailwarn); destination(mailwarn);};",
+            //    "log { source(src); source(chroots); filter(f_mailerr); destination(mailerr);};",
+            //    "log { source(src); source(chroots); filter(f_mail); destination(mail);};",
+            //    "log { source(src); source(chroots); filter(f_acpid); destination(acpid); flags(final);};",
+            //    "log { source(src); source(chroots); filter(f_acpid_full); destination(devnull); flags(final);};",
+            //    "log { source(src); source(chroots); filter(f_acpid_old); destination(acpid); flags(final);};",
+            //    "log { source(src); source(chroots); filter(f_netmgm); destination(netmgm);flags(final);};",
+            //    "log { source(src); source(chroots); filter(f_local); destination(localmessages);};",
+            //    "log { source(src); source(chroots); filter(f_messages); destination(messages);};",
+            //    "log { source(src); source(chroots); filter(f_iptables); destination(firewall);};",
+            //    "log { source(src); source(chroots); filter(f_warn); destination(warn);};",
+            //    "options { chain_hostnames(off); flush_lines(0); perm(0640); stats_freq(3600);threaded(yes);};"
+            //);
+
+            LogStatus("Ensuring permissions for important files...");
             "sudo chmod -R g-wx,o-rwx /var/log/*".Bash();
-            //Skipped "Ensure logrotate is configured"
             "sudo systemctl enable cron".Bash();
             "sudo chown root:root /etc/crontab".Bash();
             "sudo chmod og-rwx /etc/crontab".Bash();
@@ -427,54 +556,6 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             "sudo chown root:root /etc/cron.allow".Bash();
             "sudo chown root:root /etc/at.allow".Bash();
             "sudo chown root:root /etc/ssh/sshd_config".Bash();
-            SetFileParameters("/etc/ssh/sshd_config", " ",
-                "Protocol 2",
-                "LogLevel INFO",
-                "X11Forwarding no",
-                "MaxAuthTries 4",
-                "IgnoreRhosts yes",
-                "HostbasedAuthentication no",
-                "PermitRootLogin no",
-                "PermitEmptyPasswords no",
-                "PermitUserEnvironment no",
-                "MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com",
-                "ClientAliveInterval 300",
-                "ClientAliveCountMax 0",
-                "LoginGraceTime 60",
-                "Banner /etc/issue.net"
-                );
-            //Skipped "Ensure SSH access is limited"
-            AddStringsToFile("/etc/pam.d/common-password",
-                "password requisite pam_pwquality.so retry=3",
-                "password required pam_pwhistory.so remember=5",
-                "password [success=1 default=ignore] pam_unix.so sha512");
-            SetFileParameters("/etc/security/pwquality.conf","=",
-                "minlen = 14",
-                "dcredit = -1",
-                "ucredit = -1",
-                "ocredit = -1",
-                "lcredit = -1"
-                );
-            AddStringsToFile("/etc/pam.d/common-authfile",
-                "auth required pam_tally2.so onerr=fail audit silent deny=5 unlock_time=900");
-            SetFileParameters("/etc/login.defs", " ",
-                "PASS_MAX_DAYS 90",
-                "PASS_MIN_DAYS 7",
-                "PASS_WARN_AGE 7");
-            //Skipped "Ensure password expiration is 365 days or less"
-            //Skipped "Ensure minimum days between password changes is 7 or more"
-            //Skipped "Ensure password expiration warning days is 7 or more"
-            "sudo useradd -D -f 30".Bash();
-            //Skipped "Ensure inactive password lock is 30 days or less"
-            //Skipped "Ensure all users last password change date is in the past"
-            "for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do; if [ $user != \"root\" ]; then; sudo usermod -L $user; if [ $user != \"sync\" ] && [ $user != \"shutdown\" ] && [ $user != \"halt\" ];; then; sudo usermod -s /usr/sbin/nologin $user; fi; fi; done".Bash();
-            "sudo usermod -g 0 root".Bash();
-            //Skipped "Ensure default user umask is 027 or more restrictive"
-            //Skipped "Ensure default user shell timeout is 900 seconds or less"
-            //Skipped "Ensure root login is restricted to system console"
-            AddStringsToFile("/etc/pam.d/su", "auth required pam_wheel.so");
-            //Skipped "Ensure access to the su command is restricted"
-            //Skipped "Audit system file permissions"
             "sudo chown root:root /etc/passwd".Bash();
             "sudo chmod 644 /etc/passwd".Bash();
             "sudo chown root:shadow /etc/shadow".Bash();
@@ -492,37 +573,57 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             "sudo chown root:root /etc/gshadow-".Bash();
             "sudo chown root:shadow /etc/gshadow-".Bash();
             "sudo chmod o-rwx,g-rw /etc/gshadow-".Bash();
-            //Skipped "Ensure no world writable files exist"
-            //Skipped "Ensure no unowned files or directories exist"
-            //Skipped "Ensure no ungrouped files or directories exist"
-            //Skipped "Audit SUID executables"
-            //Skipped "Audit SGID executables"
-            //Skipped "Ensure password fields are not empty"
-            //Skipped "Ensure no legacy "+" entries exist in /etc/passwd"
-            //Skipped "Ensure no legacy "+" entries exist in /etc/shadow"
-            //Skipped "Ensure no legacy "+" entries exist in /etc/group"
-            //Skipped "Ensure root is the only UID 0 account"
-            //Skipped "Ensure root PATH Integrity"
-            //SKipped "Ensure all users' home directories exist"
-            //Skipped "Ensure users' home directories permissions are 750 or more restrictive"
-            //Skipped "Ensure users own their home directories"
-            //Skipped "Ensure users' dot files are not group or world writable"
-            //Skipped "Ensure no users have .forward files"
-            //Skipped "Ensure no users have .netrc files"
-            //Skipped "Ensure users' .netrc Files are not group or world accessible"
-            //Skipped "Ensure no users have .rhosts files"
-            //Skipped "Ensure all groups in /etc/passwd exist in /etc/group"
-            //Skipped "Ensure no duplicate UIDs exist"
-            //Skipped "Ensure no duplicate GIDs exist"
-            //Skipped "Ensure no duplicate user names exist"
-            //Skipped "Ensure no duplicate group names exist"
-            //Skipped "Ensure shadow group is empty"
 
+            LogStatus("Configuring sshd...");
+            SetFileParameters("/etc/ssh/sshd_config", " ",
+                "Protocol 2",
+                "LogLevel INFO",
+                "X11Forwarding no",
+                "MaxAuthTries 4",
+                "IgnoreRhosts yes",
+                "HostbasedAuthentication no",
+                "PermitRootLogin no",
+                "PermitEmptyPasswords no",
+                "PermitUserEnvironment no",
+                "MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com",
+                "ClientAliveInterval 300",
+                "ClientAliveCountMax 0",
+                "LoginGraceTime 60",
+                "Banner /etc/issue.net"
+            );
+
+            LogStatus("Configuring password policy...");
+            AddStringsToFile("/etc/pam.d/common-password",
+                "password requisite pam_pwquality.so retry=3",
+                "password required pam_pwhistory.so remember=5",
+                "password [success=1 default=ignore] pam_unix.so sha512"
+            );
+            SetFileParameters("/etc/security/pwquality.conf","=",
+                "minlen = 14",
+                "dcredit = -1",
+                "ucredit = -1",
+                "ocredit = -1",
+                "lcredit = -1"
+            );
+            AddStringsToFile("/etc/pam.d/common-authfile",
+                "auth required pam_tally2.so onerr=fail audit silent deny=5 unlock_time=900");
+            SetFileParameters("/etc/login.defs", " ",
+                "PASS_MAX_DAYS 90",
+                "PASS_MIN_DAYS 7",
+                "PASS_WARN_AGE 7"
+            );
+            "sudo useradd -D -f 30".Bash();
+            "for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do; if [ $user != \"root\" ]; then; sudo usermod -L $user; if [ $user != \"sync\" ] && [ $user != \"shutdown\" ] && [ $user != \"halt\" ];; then; sudo usermod -s /usr/sbin/nologin $user; fi; fi; done".Bash();
+            "sudo usermod -g 0 root".Bash();
+            AddStringsToFile("/etc/pam.d/su", "auth required pam_wheel.so");
+
+            LogStatus("Removing unwanted packages...");
             RemovePackages("prelink", "openbsd-inetd", "xserver-xorg*", "nis", "rsh-client",
                 "rsh-redone-client", "talk", "telnet", "ldap-utils");
 
-            "sudo apt-get upgrade".Bash();
-            
+            LogStatus("Updating system software...");
+            "sudo apt-get upgrade -y".Bash();
+
             //string file = "/etc/ssh/sshd_config";
             //ReplaceStringInFile(file, "Port 22", "Port 2020");
             //ReplaceStringInFile(file, "Protocol 1", "Protocol 2");
@@ -538,10 +639,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             //"sudo ufw deny 2020/tcp".Bash();
             //"sudo apt-get update && sudo apt-get upgrade".Bash();
 
-            foreach (Label mi in MyScreen.GetMenu().GetMenuItems())
-            {
-                mi.EditText("WE DID IT");
-            }
+            LogStatus("TRUMP_SECURE.EXE.sh completed!");
         }
 
         static void Quit()
@@ -556,6 +654,9 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
     {
         public static string Bash(this string cmd)
         {
+            File.AppendAllText("log.txt",
+                ">" + cmd + System.Environment.NewLine
+                );
             var escapedArgs = cmd.Replace("\"", "\\\"");
 
             var process = new Process()
@@ -565,13 +666,18 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                     FileName = "/bin/bash",
                     Arguments = $"-c \"{escapedArgs}\"",
                     RedirectStandardOutput = true,
+                    RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                 }
             };
             process.Start();
             string result = process.StandardOutput.ReadToEnd();
+            result += System.Environment.NewLine + process.StandardError.ReadToEnd();
             process.WaitForExit();
+            File.AppendAllText("log.txt", 
+                result + System.Environment.NewLine
+                );
             return result;
         }
     }

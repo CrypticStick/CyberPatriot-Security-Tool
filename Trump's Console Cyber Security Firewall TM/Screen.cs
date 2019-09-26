@@ -80,7 +80,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 st.Append(' ', (totalChar/Menus.Count - menu.GetTitle().Length) / 2);
                 st.Append("{0}"+menu.GetTitle().Substring(1));
                 st.Append(' ', (totalChar/Menus.Count - menu.GetTitle().Length) / 2);
-                Console.WriteFormatted(st.ToString(), Color.Black, Color.White, menu.GetTitle().ToCharArray()[0]);
+                Console.WriteFormatted(st.ToString(), Color.LightGray, Color.White, menu.GetTitle().ToCharArray()[0]);
                 totalchar += st.ToString().Length-2;
             }
             st = new StringBuilder();
