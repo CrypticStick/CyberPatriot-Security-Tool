@@ -16,22 +16,36 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
         static private Menu MainMenu, ConfigMenu;
         static private Label status;
         private static readonly ConsoleColor StartColor = Console.BackgroundColor;
+        public static string Error = Environment.NewLine + "E:";
+        public static bool hasGUI = false;
 
         static void Main(string[] args)
         {
-            MainMenu = new Menu("Main", Color.DarkRed);
-            status = new Label("> Waiting for commands...", AnchorSide.Left | AnchorSide.Top, 2, 3, Color.Black);
-            MainMenu.Add(status);
-            //MainMenu.Add(new Button("Button 1", AnchorSide.Right | AnchorSide.Top, 20, 10, Color.BlueViolet));
+            Console.Write("Press any key to continue (or 'g' for experimental GUI mode)...");
+            if (Console.ReadKey().KeyChar.Equals('g'))
+            {
+                hasGUI = true;
+                Console.WriteLine("Warning: GUI will likely fail, but experimental logging is enabled...");
+                Thread.Sleep(1500);
+            }
+            Console.WriteLine();
 
-            ConfigMenu = new Menu("Config",Color.DarkGreen);
-            ConfigMenu.Add(new Label("Kachow", AnchorSide.Right | AnchorSide.Bottom, 10, 4));
+            if (hasGUI)
+            {
+                MainMenu = new Menu("Main", Color.LightBlue);
+                status = new Label("> Waiting for commands...", AnchorSide.Left | AnchorSide.Top, 2, 3, Color.Black);
+                MainMenu.Add(status);
+                //MainMenu.Add(new Button("Button 1", AnchorSide.Right | AnchorSide.Top, 20, 10, Color.BlueViolet));
 
-            MyScreen = new Screen(MainMenu);
-            MyScreen.AddMenu(ConfigMenu);
+                ConfigMenu = new Menu("Test", Color.DarkBlue);
+                ConfigMenu.Add(new Label("Test Menu!!!", AnchorSide.Right | AnchorSide.Bottom, 10, 4, Color.White));
 
-            MyScreen.WindowResizedEvent += OnWindowResized;
-            MyScreen.KeyReceivedEvent += OnKeyReceived;
+                MyScreen = new Screen(MainMenu);
+                MyScreen.AddMenu(ConfigMenu);
+
+                MyScreen.WindowResizedEvent += OnWindowResized;
+                MyScreen.KeyReceivedEvent += OnKeyReceived;
+            }
 
             Secure();
         }
@@ -108,16 +122,23 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
         static void LogStatus(string message)
         {
-            status.EditText("> " + message);
-            MyScreen.Reload();
+            if (hasGUI)
+            {
+                status.EditText("> " + message);
+                MyScreen.Reload();
+            } else
+            {
+                Console.WriteLine("<<<" + message + ">>>");
+            }
         }
 
         static void Secure()
         {
+
             File.Delete("log.txt");
             LogStatus("Running TRUMP_SECURE.EXE.sh...");
 
-            if ("sudo apt-get update".Bash().Contains("\nE: ")) {
+            if ("sudo apt-get update".Bash().Contains(Error)) {
                 LogStatus("ERROR: Failed to update packages.");
                 return;
             }
@@ -134,37 +155,24 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             string[] toInstall = {"aide", "aide-common", "selinux", "chrony",
                 "tcpd", "iptables", "rsyslog", "libpam-pwquality"};
             string results = InstallPackages(toInstall);
-            if (results.Contains("Some packages could not be installed."))
+
+            if (results.Contains("Some packages could not be installed.") || results.Contains(Error))
             {
                 LogStatus("Failed to install packages, attempting force >:)");
+                "sudo killall apt apt-get".Bash();
+                "sudo rm /var/lib/apt/lists/lock".Bash();
+                "sudo rm /var/cache/apt/archives/lock".Bash();
+                "sudo rm /var/lib/dpkg/lock*".Bash();
+                "sudo dpkg --configure -a".Bash();
                 "sudo apt-get remove syslog-ng -y".Bash(); //interferes with rsyslog
                 "sudo apt-get install -f -y".Bash();    //force any broken dependencies to install
+                "sudo apt-get update".Bash();
                 results = InstallPackages(toInstall);
-                if (results.Contains("Some packages could not be installed."))
+                if (results.Contains("Some packages could not be installed.") || results.Contains(Error))
                 {
-                    LogStatus("ERROR: Failed to install packages :(");
+                    LogStatus("ERROR: Failed to install packages. Maybe try restarting the system?");
                     return;
                 }
-            }
-
-            if (results.Contains("Could not get lock"))
-            {
-                LogStatus("WARNING: dpkg locked, breaking in!!...");
-                "sudo rm /var/lib/dpkg/lock*".Bash();
-                results = InstallPackages(toInstall);
-            }
-
-            if (results.Contains("dpkg was interrupted"))
-            {
-                LogStatus("WARNING: dpkg interrupted, attempting fix...");
-                "sudo dpkg --configure -a".Bash();
-                results = InstallPackages(toInstall);
-            }
-
-            if (results.Contains("\nE: "))
-            {
-                LogStatus("ERROR: Failed to install packages. Maybe try restarting the system?");
-                return;
             }
 
             LogStatus("Configuring CIS.conf...");
@@ -659,25 +667,62 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 );
             var escapedArgs = cmd.Replace("\"", "\\\"");
 
-            var process = new Process()
-            {
-                StartInfo = new ProcessStartInfo
+            var process = (Program.hasGUI) ? 
+                new Process()
                 {
-                    FileName = "/bin/bash",
-                    Arguments = $"-c \"{escapedArgs}\"",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                }
-            };
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "/bin/bash",
+                        Arguments = $"-c \"{escapedArgs}\"",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                    }
+                } :
+                new Process()
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "/bin/bash",
+                        Arguments = $"-c \"{escapedArgs}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                    }
+                };
+
             process.Start();
-            string result = process.StandardOutput.ReadToEnd();
-            result += System.Environment.NewLine + process.StandardError.ReadToEnd();
+            string result = "";
+            //string current = "";
+            //
+            //while (!process.HasExited || 
+            //    process.StandardOutput.Peek() >= 0 || 
+            //    process.StandardError.Peek() >= 0)
+            //{
+            //    if (process.StandardError.Peek() >= 0) {
+            //        current = process.StandardError.ReadLine() + System.Environment.NewLine;
+            //        result += current;
+            //        File.AppendAllText("log.txt", current);
+            //    } else if (process.StandardOutput.Peek() >= 0) {
+            //        current = process.StandardOutput.ReadLine() + System.Environment.NewLine;
+            //        File.AppendAllText("log.txt", current);
+            //        result += current;
+            //    }
+            //}
+
             process.WaitForExit();
-            File.AppendAllText("log.txt", 
-                result + System.Environment.NewLine
-                );
+
+            if (Program.hasGUI)
+            {
+                result = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+                File.AppendAllText("log.txt",
+                    result + System.Environment.NewLine
+                    );
+            } else
+            {
+                result = (process.ExitCode != 0) ? Program.Error : "";
+            }
+
             return result;
         }
     }
