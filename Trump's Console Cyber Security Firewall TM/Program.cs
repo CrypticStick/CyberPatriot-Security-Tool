@@ -74,7 +74,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             StringBuilder sb = new StringBuilder();
             foreach (string text in newText)
             {
-                $"/bin/bash -c 'if [ ! -d \"{filepath}\" ]; then\nsudo touch \"{filepath}\"\nfi'".Bash();
+                $"if [ ! -d \"{filepath}\" ]; then sudo touch \"{filepath}\"; fi".Bash();
                 sb.Append($"sudo echo -e \"\n{text}\" >> {filepath}".Bash());
             }
             return sb.ToString();
@@ -89,7 +89,9 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             {
                 string paramName = text.Split(delimiter)[0].Trim();
                 string paramValue = text.Split(delimiter)[1].Trim();
-                if ($"sudo grep \"^[^#;]{paramName}\" \"{filepath}\"".Bash().Trim().Equals(""))
+                File.WriteAllText("buffer.txt", "");
+                $"sudo grep \"^[^#;]{paramName}\" \"{filepath}\" >> buffer.txt".Bash();
+                if (File.ReadAllText("buffer.txt").Trim().Equals(""))
                     AddStringsToFile(filepath, text);
                 else
                     sb.Append($"sudo sed -e '/#/!s/\\({paramName}[[:space:]]*{delimiter}[[:space:]]*\\)\\(.*\\)/\\1\"{paramValue}\"/' {filepath}".Bash());
@@ -136,7 +138,8 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
         {
 
             File.Delete("log.txt");
-            LogStatus("Running TRUMP_SECURE.EXE.sh...");
+            LogStatus("Preparing system for updates...");
+            "sudo date -s \"$(wget -qSO- --max-redirect=0 google.com 2>&1 | grep Date: | cut -d' ' -f5-8)Z\"".Bash();
 
             if ("sudo apt-get update".Bash().Contains(Error)) {
                 LogStatus("ERROR: Failed to update packages.");
@@ -153,7 +156,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             //TODO: Add installation progress bar
             LogStatus("Installing packages...");
             string[] toInstall = {"aide", "aide-common", "selinux", "chrony",
-                "tcpd", "iptables", "rsyslog", "libpam-pwquality"};
+                "tcpd", "iptables", "rsyslog", "libpam-pwquality", "openssh-server", "auditd"};
             string results = InstallPackages(toInstall);
 
             if (results.Contains("Some packages could not be installed.") || results.Contains(Error))
@@ -621,7 +624,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 "PASS_WARN_AGE 7"
             );
             "sudo useradd -D -f 30".Bash();
-            "for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do; if [ $user != \"root\" ]; then; sudo usermod -L $user; if [ $user != \"sync\" ] && [ $user != \"shutdown\" ] && [ $user != \"halt\" ];; then; sudo usermod -s /usr/sbin/nologin $user; fi; fi; done".Bash();
+            "for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do; if [ $user != \"root\" ]; then; usermod -L $user; if [ $user != \"sync\" ] && [ $user != \"shutdown\" ] && [ $user != \"halt\" ]; then; usermod -s /usr/sbin/nologin $user; fi; fi; done".Bash();
             "sudo usermod -g 0 root".Bash();
             AddStringsToFile("/etc/pam.d/su", "auth required pam_wheel.so");
 
@@ -693,22 +696,6 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
             process.Start();
             string result = "";
-            //string current = "";
-            //
-            //while (!process.HasExited || 
-            //    process.StandardOutput.Peek() >= 0 || 
-            //    process.StandardError.Peek() >= 0)
-            //{
-            //    if (process.StandardError.Peek() >= 0) {
-            //        current = process.StandardError.ReadLine() + System.Environment.NewLine;
-            //        result += current;
-            //        File.AppendAllText("log.txt", current);
-            //    } else if (process.StandardOutput.Peek() >= 0) {
-            //        current = process.StandardOutput.ReadLine() + System.Environment.NewLine;
-            //        File.AppendAllText("log.txt", current);
-            //        result += current;
-            //    }
-            //}
 
             process.WaitForExit();
 
