@@ -7,6 +7,8 @@ using static Trump_s_Console_Cyber_Security_Firewall_TM.Screen;
 using System.Text;
 using System.IO;
 using System.Threading;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Trump_s_Console_Cyber_Security_Firewall_TM
 {
@@ -47,7 +49,16 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 MyScreen.KeyReceivedEvent += OnKeyReceived;
             }
 
-            Secure();
+            List<string> readmeText = new List<string>();
+            LogStatus("Paste contents of README user list here. Enter \"done\" to continue.");
+            while (true) {
+                string line = Console.ReadLine();
+                if (line.Equals("done"))
+                    break;
+                readmeText.Add(line);
+            }
+            ConfigureUsers(readmeText);
+            //Secure();
         }
 
         static void OnWindowResized(object sender, EventArgs e)
@@ -69,12 +80,18 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             return $"sudo sed -i '.bak' -e 's/{toReplace}/{replacement}/g' {filepath}".Bash();
         }
 
-        static string AddStringsToFile(string filepath, params string[] newText)
+        static string AddStringsToFile(string filepath, bool force, params string[] newText)
         {
             StringBuilder sb = new StringBuilder();
             foreach (string text in newText)
             {
                 $"if [ ! -d \"{filepath}\" ]; then sudo touch \"{filepath}\"; fi".Bash();
+                if (!force)
+                {
+                    if (!File.Exists(filepath)) return $"The file '{filepath}' does not exist.";
+                    if (File.ReadAllText(filepath).Contains(text))
+                        continue;
+                }
                 sb.Append($"sudo echo -e \"\n{text}\" >> {filepath}".Bash());
             }
             return sb.ToString();
@@ -92,7 +109,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 File.WriteAllText("buffer.txt", "");
                 $"sudo grep \"^[^#;]{paramName}\" \"{filepath}\" >> buffer.txt".Bash();
                 if (File.ReadAllText("buffer.txt").Trim().Equals(""))
-                    AddStringsToFile(filepath, text);
+                    AddStringsToFile(filepath, true, text);
                 else
                     sb.Append($"sudo sed -e '/#/!s/\\({paramName}[[:space:]]*{delimiter}[[:space:]]*\\)\\(.*\\)/\\1\"{paramValue}\"/' {filepath}".Bash());
             }
@@ -134,6 +151,124 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             }
         }
 
+        static int ConfigureUsers(List<string> lines)
+        {
+            ArrayList userList;
+            ArrayList admins;
+            try
+            {
+                userList = new ArrayList();
+                foreach (string line in lines)
+                    userList.Add(line.Trim());
+                
+                if (userList.Count < 2 || !userList.Contains("Authorized Administrators:") || !userList.Contains("Authorized Users:"))
+                {
+                    LogStatus("User data was improperly pasted, skipping >:(");
+                    return 2;
+                }
+
+                for (int i = 0; i < userList.Count; i++) //removes everything except users
+                {
+                    string line = userList[i].ToString();
+                    
+                    if (line.Contains("password:") || line.Equals(""))
+                    {
+                        userList.RemoveAt(i);
+                        continue;
+                    }
+
+                    userList[i] = line;
+                }
+
+                userList.RemoveAt(0);
+                userList[0] = userList[0].ToString().
+                    Substring(0, userList[0].ToString().LastIndexOf(' '));
+
+                admins = new ArrayList(userList);
+
+                admins.RemoveRange(
+                    admins.IndexOf("Authorized Users:"),
+                    admins.Count - admins.IndexOf("Authorized Users:")
+                    );
+
+                userList.Remove("Authorized Users:");
+            }
+            catch (Exception ex)
+            {
+                LogStatus("The provided list of names doesn't work :/");
+                return 3;
+            }
+
+            List<string> usersOnSystem = new List<string>();
+
+            try
+            {
+                //"awk -F: '{ print $1}' /etc/passwd >> usernames.txt".Bash();
+                //usersOnSystem.AddRange(File.ReadAllLines("usernames.txt")); 
+                foreach (string line in File.ReadAllLines("/etc/passwd"))
+                {
+                    string[] elements = line.Split(':');
+                    int uid = 0;
+                    if (!int.TryParse(elements[2], out uid)) continue;
+                    if (uid < 1000) continue;
+                    usersOnSystem.Add(elements[0]);
+                }
+            } catch (Exception ex)
+            {
+                LogStatus("Failed to read current system users.");
+                return 4;
+            }
+
+            //LogStatus("UserList:");
+            //foreach (string name in userList)
+            //{
+            //    LogStatus(name);
+            //}
+
+            //LogStatus("Admins:");
+            //foreach (string name in admins)
+            //{
+            //    LogStatus(name);
+            //}
+
+            //LogStatus("Users on system:");
+            //foreach (string name in usersOnSystem)
+            //{
+            //    LogStatus(name);
+            //}
+
+            foreach (string user in userList)
+            {
+                if (!usersOnSystem.Contains(user))
+                {
+                    ("sudo useradd " + user).Bash();
+                }
+            }
+
+            foreach (string user in usersOnSystem)
+            {
+                if (!userList.Contains(user))
+                {
+                    ("sudo userdel " + user).Bash();
+                    continue;
+                }
+
+                if (admins.Contains(user))
+                {
+                    ("sudo usermod -aG sudo " + user).Bash();
+                }
+                else
+                {
+                    ("sudo deluser " + user + " sudo").Bash();
+                }
+               
+                //if (!admins[0].Equals(user))
+                    //("echo \"$uperSuit76\" | passwd --stdin " + user).Bash();
+                    //("echo '"+user+":$uperSuit76' | sudo chpasswd").Bash();
+            }
+            return 0;
+        }
+
         static void Secure()
         {
 
@@ -156,7 +291,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             //TODO: Add installation progress bar
             LogStatus("Installing packages...");
             string[] toInstall = {"aide", "aide-common", "selinux", "chrony",
-                "tcpd", "iptables", "rsyslog", "libpam-pwquality", "openssh-server", "auditd"};
+                "tcpd", "iptables", "rsyslog", "libpam-pwquality", "openssh-server", "auditd", "prelink"};
             string results = InstallPackages(toInstall);
 
             if (results.Contains("Some packages could not be installed.") || results.Contains(Error))
@@ -179,7 +314,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             }
 
             LogStatus("Configuring CIS.conf...");
-            AddStringsToFile("/etc/modprobe.d/CIS.conf", 
+            AddStringsToFile("/etc/modprobe.d/CIS.conf", false,
                 "install cramfs /bin/true",
                 "install freevxfs /bin/true",
                 "install jffs2 /bin/true",
@@ -286,15 +421,15 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             "sudo aideinit".Bash();
 
             LogStatus("Configuring crontab...");
-            "sudo crontab -u root -l > temp-crontab".Bash();
-            AddStringsToFile("temp-crontab", "0 5 * * * /usr/bin/aide --config /etc/aide/aide.conf --check");
-            "sudo crontab -u root temp-crontab".Bash();
+            "crontab -u root -l > temp-crontab".Bash();
+            AddStringsToFile("temp-crontab", false, "0 5 * * * /usr/bin/aide --config /etc/aide/aide.conf --check");
+            "crontab -u root temp-crontab".Bash();
             "sudo chown root:root /boot/grub/grub.cfg".Bash();
             "sudo chmod og-rwx /boot/grub/grub.cfg".Bash();
-            "sudo echo $uperSuit76 | passwd --stdin root".Bash(); //TODO: FIX
+            "sudo usermod --password $(openssl passwd -1 {$uperSuit76}) root".Bash();
 
             LogStatus("Ensuring core dumps are restricted...");
-            AddStringsToFile("/etc/security/limits.conf", "* hard core 0");
+            AddStringsToFile("/etc/security/limits.conf", false, "* hard core 0");
 
             LogStatus("Configuring sysctl.conf...");
             SetFileParameters("/etc/sysctl.conf", "=",
@@ -339,7 +474,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             "sudo sysctl -w net.ipv4.conf.all.log_martians=1".Bash();
             "sudo sysctl -w net.ipv4.conf.default.log_martians=1".Bash();
             "sudo sysctl -w net.ipv4.route.flush=1".Bash();
-            "sudo net.ipv4.icmp_echo_ignore_broadcasts = 1".Bash();
+            "sudo sysctl -w net.ipv4.icmp_echo_ignore_broadcasts = 1".Bash();
             "sudo sysctl -w net.ipv4.route.flush=1".Bash();
             "sudo sysctl -w net.ipv4.icmp_ignore_bogus_error_responses=1".Bash();
             "sudo sysctl -w net.ipv4.route.flush=1".Bash();
@@ -391,11 +526,11 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             "sudo chmod 644 /etc/issue".Bash();
             "sudo chown root:root /etc/issue.net".Bash();
             "sudo chmod 644 /etc/issue.net".Bash();
-            AddStringsToFile("/etc/dconf/profile/gdm", 
+            AddStringsToFile("/etc/dconf/profile/gdm", false,
                 "user-db:user",
                 "system-db:gdm file-db:/usr/share/gdm/greeter-dconf-defaults"
                 );
-            AddStringsToFile("/etc/dconf/db/gdm.d/01-banner-message", 
+            AddStringsToFile("/etc/dconf/db/gdm.d/01-banner-message", false,
                 "[org/gnome/login-screen]",
                 "banner-message-enable=true",
                 "banner-message-text='Authorized uses only. All activity may be monitored and reported.'"
@@ -409,11 +544,11 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 "squid", "snmpd", "rsync", "nis", "xinetd", "autof");
 
             LogStatus("Ensuring mail transfer agent is configured for local-only mode...");
-            AddStringsToFile("/etc/postfix/main.cf", "inet_interfaces = loopback-only");
+            AddStringsToFile("/etc/postfix/main.cf", false, "inet_interfaces = loopback-only");
             "sudo systemctl restart postfix".Bash();
 
             LogStatus("Configuring network security...");
-            AddStringsToFile("/etc/default/grub", 
+            AddStringsToFile("/etc/default/grub", false,
                 "GRUB_CMDLINE_LINUX=\"ipv6.disable = 1\"",
                 "GRUB_CMDLINE_LINUX=\"audit = 1\"");
             "sudo echo \"ALL: < net >/< mask >, < net >/< mask >, ...\" >/etc/hosts.allow".Bash();
@@ -444,7 +579,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 );
             "sudo systemctl enable auditd".Bash();
             "sudo update-grub".Bash();
-            AddStringsToFile("/etc/audit/audit.rules",
+            AddStringsToFile("/etc/audit/audit.rules", false,
                 "-a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change",
                 "-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k timechange",
                 "-a always,exit -F arch=b64 -S clock_settime -k time-change",
@@ -495,7 +630,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
             LogStatus("Configuring rsyslog...");
             "sudo systemctl enable rsyslog".Bash();
-            AddStringsToFile("/etc/rsyslog.conf",
+            AddStringsToFile("/etc/rsyslog.conf", false,
                 "*.emerg :omusrmsg:*",
                 "mail.* -/var/log/mail",
                 "mail.info -/var/log/mail.info",
@@ -587,15 +722,20 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
 
             LogStatus("Configuring sshd...");
             SetFileParameters("/etc/ssh/sshd_config", " ",
+                "Port 2020",
                 "Protocol 2",
                 "LogLevel INFO",
                 "X11Forwarding no",
                 "MaxAuthTries 4",
                 "IgnoreRhosts yes",
+                "UsePAM no",
                 "HostbasedAuthentication no",
                 "PermitRootLogin no",
                 "PermitEmptyPasswords no",
                 "PermitUserEnvironment no",
+                "ChallengeResponseAuthentication no",
+                "PasswordAuthentication no",
+                "PubkeyAuthentication no",
                 "MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com",
                 "ClientAliveInterval 300",
                 "ClientAliveCountMax 0",
@@ -604,7 +744,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
             );
 
             LogStatus("Configuring password policy...");
-            AddStringsToFile("/etc/pam.d/common-password",
+            AddStringsToFile("/etc/pam.d/common-password", false,
                 "password requisite pam_pwquality.so retry=3",
                 "password required pam_pwhistory.so remember=5",
                 "password [success=1 default=ignore] pam_unix.so sha512"
@@ -616,7 +756,7 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 "ocredit = -1",
                 "lcredit = -1"
             );
-            AddStringsToFile("/etc/pam.d/common-authfile",
+            AddStringsToFile("/etc/pam.d/common-authfile", false,
                 "auth required pam_tally2.so onerr=fail audit silent deny=5 unlock_time=900");
             SetFileParameters("/etc/login.defs", " ",
                 "PASS_MAX_DAYS 90",
@@ -624,26 +764,56 @@ namespace Trump_s_Console_Cyber_Security_Firewall_TM
                 "PASS_WARN_AGE 7"
             );
             "sudo useradd -D -f 30".Bash();
-            "for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do; if [ $user != \"root\" ]; then; usermod -L $user; if [ $user != \"sync\" ] && [ $user != \"shutdown\" ] && [ $user != \"halt\" ]; then; usermod -s /usr/sbin/nologin $user; fi; fi; done".Bash();
+
+            string[] script1 = {
+            "#!/bin/bash",
+            "for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do",
+            "if [ $user != \"root\" ]; then",
+            "usermod -L $user",
+            "if [ $user != \"sync\" ] && [ $user != \"shutdown\" ] && [ $user != \"halt\" ];",
+            "then",
+            "usermod -s /usr/sbin/nologin $user",
+            "fi",
+            "fi",
+            "done"
+            };
+
+            StreamWriter script1File = File.CreateText("script1.sh");
+            foreach (string line in script1)
+                script1File.WriteLine(line);
+            script1File.Close();
+            "sudo chmod u+x script1.sh".Bash();
+            "./script1.sh".Bash();
+
             "sudo usermod -g 0 root".Bash();
-            AddStringsToFile("/etc/pam.d/su", "auth required pam_wheel.so");
+            AddStringsToFile("/etc/pam.d/su", false, "auth required pam_wheel.so");
 
             LogStatus("Removing unwanted packages...");
-            RemovePackages("prelink", "openbsd-inetd", "xserver-xorg*", "nis", "rsh-client",
-                "rsh-redone-client", "talk", "telnet", "ldap-utils");
+            string[] toRemove = {"prelink", "openbsd-inetd", "xserver-xorg*", "nis", "rsh-client",
+                "rsh-redone-client", "talk", "telnet", "ldap-utils"};
+            results = RemovePackages(toRemove);
+
+            if (results.Contains(Error))
+            {
+                LogStatus("Failed to install packages, attempting force >:)");
+                "sudo killall apt apt-get".Bash();
+                "sudo rm /var/lib/apt/lists/lock".Bash();
+                "sudo rm /var/cache/apt/archives/lock".Bash();
+                "sudo rm /var/lib/dpkg/lock*".Bash();
+                "sudo dpkg --configure -a".Bash();
+                "sudo apt-get remove syslog-ng -y".Bash(); //interferes with rsyslog
+                "sudo apt-get install -f -y".Bash();    //force any broken dependencies to install
+                "sudo apt-get update".Bash();
+                results = InstallPackages(toInstall);
+                if (results.Contains(Error))
+                {
+                    LogStatus("ERROR: Failed to remove packages. Maybe try restarting the system?");
+                    return;
+                }
+            }
 
             LogStatus("Updating system software...");
             "sudo apt-get upgrade -y".Bash();
-
-            //string file = "/etc/ssh/sshd_config";
-            //ReplaceStringInFile(file, "Port 22", "Port 2020");
-            //ReplaceStringInFile(file, "Protocol 1", "Protocol 2");
-            //ReplaceStringInFile(file, "PermitRootLogin yes", "PermitRootLogin no");
-            //ReplaceStringInFile(file, "ChallengeResponseAuthentication yes", "ChallengeResponseAuthentication no");
-            //ReplaceStringInFile(file, "PasswordAuthentication yes", "PasswordAuthentication no");
-            //ReplaceStringInFile(file, "UsePAM yes", "UsePAM no");
-            //ReplaceStringInFile(file, "PubkeyAuthentication yes", "PubkeyAuthentication no");
-            //ReplaceStringInFile(file, "PermitEmptyPasswords yes", "PermitEmptyPasswords no");
 
             //"echo \"install usb-storage /bin/true\" > /etc/modprobe.d/no-usb".Bash();
             //"sudo ufw deny 22".Bash();
